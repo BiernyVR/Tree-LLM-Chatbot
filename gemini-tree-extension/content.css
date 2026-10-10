@@ -282,6 +282,19 @@ body:not(.dark-theme):not(.theme-dark) .gt-drawer-title-wrap h3 {
   color: #0f172a;
 }
 
+.gt-version-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 1px 6px;
+  border-radius: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+  display: inline-block;
+}
+
 .gt-drawer-icon-accent {
   color: var(--gt-primary);
   display: flex;

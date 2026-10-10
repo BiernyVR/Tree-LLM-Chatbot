@@ -173,7 +173,7 @@
       <div class="gt-drawer-header">
         <div class="gt-drawer-title-wrap">
           <span class="gt-drawer-icon-accent">${SVG_NETWORK}</span>
-          <h3>Drzewo Konwersacji Gemini</h3>
+          <h3>Drzewo Konwersacji Gemini <span class="gt-version-badge">v1.1</span></h3>
         </div>
         <div class="gt-drawer-actions-wrap">
           <button class="gt-drawer-action-btn" id="gt-drawer-clear-btn" title="Wyczyść wszystkie gałęzie w tej sesji">
@@ -842,19 +842,25 @@
 
     const activePathIds = new Set();
     let currId = currentTree.currentNodeId;
-    while (currId && currentTree.nodes[currId]) {
+    const pathVisited = new Set();
+    while (currId && currentTree.nodes[currId] && !pathVisited.has(currId)) {
+      pathVisited.add(currId);
       activePathIds.add(currId);
       currId = currentTree.nodes[currId].parentId;
     }
 
     // 1. Build hierarchy of turns
+    const visitedHierarchy = new Set();
     function buildHierarchy(nodeId, depth = 1) {
+      if (!nodeId || visitedHierarchy.has(nodeId)) return null;
+      visitedHierarchy.add(nodeId);
+
       const node = currentTree.nodes[nodeId];
       if (!node || node.role === 'system') return null;
 
       const validChildrenIds = (node.childrenIds || []).filter(cId => {
         const c = currentTree.nodes[cId];
-        return c && c.role !== 'system';
+        return c && c.role !== 'system' && !visitedHierarchy.has(cId);
       });
 
       const children = validChildrenIds
@@ -1165,6 +1171,7 @@
 
   // --- Initialization ---
   async function init() {
+    console.log('%c[Gemini Tree] Extension v1.1.0 loaded successfully!', 'color: #10b981; font-weight: bold;');
     await checkMasterEnabled();
     if (!isExtensionEnabled) return;
 
