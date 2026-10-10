@@ -362,6 +362,7 @@
       const userQueryElements = findUserQueryElements();
       let prevParentId = 'root';
       let changed = false;
+      const claimedNodeIds = new Set();
 
       userQueryElements.forEach((el, index) => {
         const text = extractTextFromElement(el);
@@ -369,10 +370,13 @@
 
         let existingNode = null;
 
-        // Check 1: Already assigned ID on DOM element
+        // Check 1: Already assigned ID on DOM element (must be unclaimed in this scan pass)
         const assignedId = el.getAttribute('data-gt-node-id');
-        if (assignedId && currentTree.nodes[assignedId]) {
+        if (assignedId && currentTree.nodes[assignedId] && !claimedNodeIds.has(assignedId)) {
           existingNode = currentTree.nodes[assignedId];
+        } else if (assignedId && claimedNodeIds.has(assignedId)) {
+          // Remove duplicate tag so it gets assigned its own unique node
+          el.removeAttribute('data-gt-node-id');
         }
 
         // Check 2: Was this just created as a branch in handleUserSentMessage?
@@ -386,9 +390,13 @@
           }
         }
 
-        // Check 3: Match by exact content in existing nodes
+        // Check 3: Match by exact content ONLY in unclaimed existing nodes
         if (!existingNode) {
-          existingNode = Object.values(currentTree.nodes).find(n => n.role === 'user' && n.content === text);
+          existingNode = Object.values(currentTree.nodes).find(n => 
+            n.role === 'user' && 
+            n.content === text && 
+            !claimedNodeIds.has(n.id)
+          );
         }
 
         // Check 4: If brand new message not recognized, add under current active node
@@ -402,7 +410,7 @@
             targetParentId = prevParentId;
           }
 
-          const nodeId = 'user-' + hashStr(text) + '-' + index;
+          const nodeId = 'user-' + hashStr(text) + '-' + index + '-' + Date.now();
           existingNode = {
             id: nodeId,
             parentId: targetParentId,
@@ -425,6 +433,7 @@
         }
 
         el.setAttribute('data-gt-node-id', existingNode.id);
+        claimedNodeIds.add(existingNode.id);
 
         // Only update prevParentId if this turn is NOT hidden (so hidden branches do not corrupt linear parent)
         const targetMsgEl = getSafeMessageElement(el);
@@ -577,14 +586,20 @@
     btn.title = 'Stwórz nową gałąź (alternatywne pytanie na tym poziomie konwersacji)';
     btn.onclick = (e) => {
       e.stopPropagation();
-      onBranchOffClick(text);
+      const nodeId = userQueryEl.getAttribute('data-gt-node-id');
+      const node = nodeId ? currentTree.nodes[nodeId] : null;
+      if (node) {
+        onBranchOffClick(node);
+      } else {
+        const found = Object.values(currentTree.nodes).find(n => n.role === 'user' && n.content === text);
+        if (found) onBranchOffClick(found);
+      }
     };
 
     actionContainer.appendChild(btn);
   }
 
-  function onBranchOffClick(promptText) {
-    const node = Object.values(currentTree.nodes).find(n => n.role === 'user' && n.content === promptText);
+  function onBranchOffClick(node) {
     if (!node) return;
 
     branchingFromNode = node;
