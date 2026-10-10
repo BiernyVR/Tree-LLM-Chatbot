@@ -26,6 +26,9 @@
   let drawerOpen = false;
   let scanDebounceTimer = null;
   let isScanning = false;
+  let currentGraphScale = 'auto'; // 'auto' or float value
+  let lastCalculatedScale = 1.0;
+  let renderGraphDebounceTimer = null;
 
   function createEmptyTree(chatId) {
     return {
@@ -171,6 +174,7 @@
     drawer.id = 'gt-drawer';
     drawer.className = 'gt-drawer';
     drawer.innerHTML = `
+      <div id="gt-drawer-resizer" class="gt-drawer-resizer" title="Przeciągnij lewą krawędź, aby rozszerzyć panel"></div>
       <div class="gt-drawer-header">
         <div class="gt-drawer-title-wrap">
           <span class="gt-drawer-icon-accent">${SVG_NETWORK}</span>
@@ -202,11 +206,26 @@
           </div>
         </div>
 
-        <div class="gt-legend">
-          <div class="gt-legend-item"><span class="gt-legend-dot active"></span> Aktywna</div>
-          <div class="gt-legend-item"><span class="gt-legend-dot current"></span> Jesteś tutaj</div>
-          <div class="gt-legend-item"><span class="gt-legend-dot other"></span> Inne odnogi</div>
-          <div class="gt-legend-item"><span class="gt-legend-dot fork"></span> Rozwidlenie</div>
+        <div class="gt-controls-row">
+          <div class="gt-legend">
+            <div class="gt-legend-item"><span class="gt-legend-dot active"></span> Aktywna</div>
+            <div class="gt-legend-item"><span class="gt-legend-dot current"></span> Jesteś tutaj</div>
+            <div class="gt-legend-item"><span class="gt-legend-dot other"></span> Inne odnogi</div>
+            <div class="gt-legend-item"><span class="gt-legend-dot fork"></span> Rozwidlenie</div>
+          </div>
+          <div class="gt-canvas-toolbar">
+            <button class="gt-tool-btn" id="gt-zoom-out" title="Zmniejsz (-)">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <span class="gt-zoom-display" id="gt-zoom-display" title="Kliknij, aby przełączyć Auto / 100%">Auto</span>
+            <button class="gt-tool-btn" id="gt-zoom-in" title="Powiększ (+)">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button class="gt-tool-btn gt-tool-fit-btn" id="gt-zoom-fit" title="Automatycznie dopasuj całe drzewo do okna">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              <span>Dopasuj</span>
+            </button>
+          </div>
         </div>
 
         <div id="gt-graph-content" class="gt-graph-container">
@@ -218,6 +237,84 @@
     document.body.appendChild(drawer);
     document.getElementById('gt-drawer-close').onclick = toggleDrawer;
     document.getElementById('gt-drawer-clear-btn').onclick = () => clearCurrentTree(false);
+    initDrawerResizer(drawer);
+    setupZoomControls();
+  }
+
+  function initDrawerResizer(drawerEl) {
+    const resizer = drawerEl.querySelector('#gt-drawer-resizer');
+    if (!resizer) return;
+
+    chrome.storage.local.get('gt_drawer_width', (res) => {
+      if (res?.gt_drawer_width && res.gt_drawer_width >= 320) {
+        drawerEl.style.width = `${res.gt_drawer_width}px`;
+      }
+    });
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    resizer.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = drawerEl.getBoundingClientRect().width;
+      resizer.classList.add('is-resizing');
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'ew-resize';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const delta = startX - e.clientX;
+      const maxW = Math.min(window.innerWidth - 280, 900);
+      const newW = Math.round(Math.min(maxW, Math.max(320, startWidth + delta)));
+      drawerEl.style.width = `${newW}px`;
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!isResizing) return;
+      isResizing = false;
+      resizer.classList.remove('is-resizing');
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      const finalW = Math.round(drawerEl.getBoundingClientRect().width);
+      chrome.storage.local.set({ gt_drawer_width: finalW });
+      renderGraph();
+    });
+  }
+
+  function setupZoomControls() {
+    document.getElementById('gt-zoom-in')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      let currentVal = currentGraphScale === 'auto' ? lastCalculatedScale : currentGraphScale;
+      currentGraphScale = parseFloat((Math.min(1.8, currentVal + 0.12)).toFixed(2));
+      renderGraph();
+    });
+
+    document.getElementById('gt-zoom-out')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      let currentVal = currentGraphScale === 'auto' ? lastCalculatedScale : currentGraphScale;
+      currentGraphScale = parseFloat((Math.max(0.35, currentVal - 0.12)).toFixed(2));
+      renderGraph();
+    });
+
+    document.getElementById('gt-zoom-fit')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      currentGraphScale = 'auto';
+      renderGraph();
+    });
+
+    document.getElementById('gt-zoom-display')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (currentGraphScale === 'auto') {
+        currentGraphScale = 1.0;
+      } else {
+        currentGraphScale = 'auto';
+      }
+      renderGraph();
+    });
   }
 
   // --- Clear / Reset Tree for Current Chat ---
@@ -938,6 +1035,55 @@
     }, 500);
   }
 
+  // --- Canvas Panning & Zoom Interaction ---
+  let isCanvasPanning = false;
+  let panStartX = 0, panStartY = 0;
+  let panStartScrollLeft = 0, panStartScrollTop = 0;
+
+  function setupCanvasPanning(container) {
+    container.onmousedown = (e) => {
+      if (e.target.closest('.gt-tree-dot, .gt-tree-tooltip, button, input')) return;
+      isCanvasPanning = true;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panStartScrollLeft = container.scrollLeft;
+      panStartScrollTop = container.scrollTop;
+      container.classList.add('is-panning');
+    };
+
+    container.onwheel = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.08 : -0.08;
+        let baseVal = currentGraphScale === 'auto' ? lastCalculatedScale : currentGraphScale;
+        currentGraphScale = parseFloat((Math.max(0.35, Math.min(1.8, baseVal + delta))).toFixed(2));
+        renderGraph();
+      }
+    };
+  }
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isCanvasPanning) return;
+    const container = document.getElementById('gt-graph-content');
+    if (!container) return;
+    container.scrollLeft = panStartScrollLeft - (e.clientX - panStartX);
+    container.scrollTop = panStartScrollTop - (e.clientY - panStartY);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isCanvasPanning) {
+      isCanvasPanning = false;
+      document.getElementById('gt-graph-content')?.classList.remove('is-panning');
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (drawerOpen) {
+      if (renderGraphDebounceTimer) clearTimeout(renderGraphDebounceTimer);
+      renderGraphDebounceTimer = setTimeout(() => renderGraph(), 150);
+    }
+  });
+
   // --- Render Hierarchical Dot Tree Graph in Drawer ---
   function renderGraph() {
     const container = document.getElementById('gt-graph-content');
@@ -1070,10 +1216,9 @@
     const allRenderEdges = [];
     let maxDepth = 1;
 
-    const containerWidth = Math.max(container.clientWidth || 340, 340);
-    const totalTreeWidth = totalCols * COL_WIDTH;
-    const stageWidth = Math.max(containerWidth, totalTreeWidth + PADDING_X * 2);
-    const startOffset = Math.max(PADDING_X, (stageWidth - totalTreeWidth) / 2);
+    const naturalTreeWidth = totalCols * COL_WIDTH;
+    const naturalWidth = Math.max(280, naturalTreeWidth + PADDING_X * 2);
+    const startOffset = Math.max(PADDING_X, (naturalWidth - naturalTreeWidth) / 2);
 
     function assignPositions(node, colOffset) {
       const centerCol = colOffset + node.width / 2;
@@ -1104,19 +1249,61 @@
       offset += root.width;
     }
 
-    const stageHeight = maxDepth * ROW_HEIGHT + PADDING_Y * 2;
+    const naturalHeight = maxDepth * ROW_HEIGHT + PADDING_Y * 2;
 
     // Update stats bar
     document.getElementById('gt-stat-nodes').textContent = totalUserNodes.toString();
     document.getElementById('gt-stat-depth').textContent = maxDepth.toString();
     document.getElementById('gt-stat-branches').textContent = (branchesCount + 1).toString();
 
-    // 6. Build Stage DOM
+    // 6. Compute Auto-Fit Scale
+    const availWidth = Math.max(260, (container.clientWidth || 340) - 16);
+    const availHeight = Math.max(260, (container.clientHeight || (window.innerHeight - 260)) - 24);
+
+    const scaleX = availWidth / naturalWidth;
+    const scaleY = availHeight / naturalHeight;
+
+    let autoScale = Math.min(scaleX, scaleY, 1.0);
+    autoScale = Math.max(0.38, Math.min(1.0, autoScale));
+    lastCalculatedScale = autoScale;
+
+    let activeScale = 1.0;
+    if (currentGraphScale === 'auto') {
+      activeScale = autoScale;
+    } else {
+      activeScale = Math.max(0.35, Math.min(1.8, Number(currentGraphScale) || 1.0));
+    }
+
+    // Update Zoom display badge
+    const displayEl = document.getElementById('gt-zoom-display');
+    if (displayEl) {
+      const pct = Math.round(activeScale * 100);
+      displayEl.textContent = currentGraphScale === 'auto' ? `Auto (${pct}%)` : `${pct}%`;
+    }
+
+    // 7. Build Stage DOM with Scale Wrapper
     container.innerHTML = '';
+
+    const stageWidth = naturalWidth;
+    const stageHeight = naturalHeight;
+    const scaledWidth = Math.round(stageWidth * activeScale);
+    const scaledHeight = Math.round(stageHeight * activeScale);
+
+    const stageWrap = document.createElement('div');
+    stageWrap.className = 'gt-tree-stage-wrap';
+    stageWrap.style.width = `${scaledWidth}px`;
+    stageWrap.style.height = `${scaledHeight}px`;
+
     const stageEl = document.createElement('div');
     stageEl.className = 'gt-tree-stage';
     stageEl.style.width = `${stageWidth}px`;
     stageEl.style.height = `${stageHeight}px`;
+    stageEl.style.transform = `scale(${activeScale})`;
+    stageEl.style.transformOrigin = 'top center';
+
+    // Counter-scale for tooltips so text is always 100% legible
+    const counterScale = activeScale < 0.92 ? `scale(${(1 / activeScale).toFixed(3)})` : 'scale(1)';
+    stageEl.style.setProperty('--gt-tooltip-counter-scale', counterScale);
 
     // Background horizontal depth guidelines
     for (let d = 1; d <= maxDepth; d++) {
@@ -1268,7 +1455,9 @@
       stageEl.appendChild(nodeWrap);
     });
 
-    container.appendChild(stageEl);
+    stageWrap.appendChild(stageEl);
+    container.appendChild(stageWrap);
+    setupCanvasPanning(container);
   }
 
   function jumpToNode(nodeId) {
