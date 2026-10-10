@@ -54,10 +54,10 @@ English
 | Store Icon [REQUIRED] | 128×128 PNG | ✅ Ready | `gemini-tree-extension/icons/icon-128.png` |
 | Extension Icon | 48×48 PNG | ✅ Ready | `gemini-tree-extension/icons/icon-48.png` |
 | Small Icon | 16×16 PNG | ✅ Ready | `gemini-tree-extension/icons/icon-16.png` |
-| Screenshot 1 [REQUIRED] | 1280×800 or 640×400 | 🟡 To capture | Interactive Tree Visualizer with Glowing Active Path |
-| Screenshot 2 [RECOMMENDED] | 1280×800 or 640×400 | 🟡 To capture | On-demand Branch Button and Version Switcher in Chat |
-| Screenshot 3 [RECOMMENDED] | 1280×800 or 640×400 | 🟡 To capture | Extension Popup with Stats and English/Polish Toggle |
-| Small Promo Tile [RECOMMENDED] | 440×280 | ⬜ Optional | Promo Tile |
+| Screenshot 1 [REQUIRED] | 1280×800 PNG | ✅ Ready | `store-assets/screenshot-1-1280x800.png` |
+| Screenshot 2 [RECOMMENDED] | 1280×800 PNG | ✅ Ready | `store-assets/screenshot-2-1280x800.png` |
+| Screenshot 3 [RECOMMENDED] | 1280×800 PNG | ✅ Ready | `store-assets/screenshot-3-1280x800.png` |
+| Small Promo Tile [RECOMMENDED] | 440×280 PNG | ✅ Ready | `store-assets/promo-tile-small-440x280.png` |
 
 ---
 
