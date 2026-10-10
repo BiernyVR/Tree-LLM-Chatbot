@@ -282,19 +282,6 @@ body:not(.dark-theme):not(.theme-dark) .gt-drawer-title-wrap h3 {
   color: #0f172a;
 }
 
-.gt-version-badge {
-  font-size: 10px;
-  font-weight: 700;
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  padding: 1px 6px;
-  border-radius: 6px;
-  margin-left: 6px;
-  vertical-align: middle;
-  display: inline-block;
-}
-
 .gt-drawer-icon-accent {
   color: var(--gt-primary);
   display: flex;
@@ -475,6 +462,13 @@ body:not(.dark-theme):not(.theme-dark) .gt-legend {
 .gt-legend-dot.active {
   background: var(--gt-active-green);
   box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.gt-legend-dot.current {
+  background: var(--gt-active-green);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.9);
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
 }
 
 .gt-legend-dot.other {
@@ -705,15 +699,26 @@ body.theme-dark .gt-item-text {
 }
 
 /* ==========================================================================
-   7. Interaktywny Graf Punktów (Dot Tree) - Prawdziwe Drzewo SVG
+   7. Interaktywny Graf Punktów (Hierarchical Dot Tree)
    ========================================================================== */
 .gt-graph-container {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   width: 100%;
+  min-height: 220px;
   overflow-x: auto;
   overflow-y: visible;
-  padding: 10px 0 30px 0;
+  padding: 8px 0;
   box-sizing: border-box;
+}
+
+.gt-graph-empty {
+  text-align: center;
+  color: var(--gt-text-muted, #94a3b8);
+  font-size: 13px;
+  padding: 48px 16px;
+  line-height: 1.5;
 }
 
 .gt-tree-stage {
@@ -722,284 +727,264 @@ body.theme-dark .gt-item-text {
   min-width: 100%;
 }
 
-/* Linie poziomów w tle (Depth grid) */
-.gt-depth-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.gt-depth-line {
+/* Poziome linie poziomów w tle */
+.gt-level-guide {
   position: absolute;
   left: 0;
   right: 0;
   height: 1px;
   border-top: 1px dashed rgba(255, 255, 255, 0.08);
-  display: flex;
-  align-items: center;
-  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 0;
 }
 
-.gt-theme-light .gt-depth-line,
-body:not(.dark-theme):not(.theme-dark) .gt-depth-line {
-  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+.gt-theme-light .gt-level-guide,
+body:not(.dark-theme):not(.theme-dark) .gt-level-guide {
+  border-top-color: rgba(0, 0, 0, 0.07);
 }
 
-.gt-depth-tag {
-  font-size: 10px;
-  color: #94a3b8;
-  background: #18191b;
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-left: 8px;
-  font-weight: 500;
-}
-
-.gt-theme-light .gt-depth-tag,
-body:not(.dark-theme):not(.theme-dark) .gt-depth-tag {
-  background: #ffffff;
-  color: #64748b;
-}
-
-/* Warstwa SVG i ścieżki gałęzi */
+/* SVG ze ścieżkami Beziera łączącymi rodzica z dziećmi */
 .gt-tree-svg {
   position: absolute;
   top: 0;
   left: 0;
   pointer-events: none;
-  overflow: visible;
+  z-index: 1;
 }
 
-.gt-tree-path {
+.gt-tree-edge {
   fill: none;
-  transition: all 0.25s ease;
+  transition: stroke 0.25s ease, stroke-width 0.25s ease;
 }
 
-.gt-tree-path.active-path {
-  stroke: var(--gt-active-green, #10b981);
-  stroke-width: 3px;
+.gt-edge-active {
+  stroke: var(--gt-active-green, #10b981) !important;
+  stroke-width: 2.6px;
   stroke-linecap: round;
 }
 
-.gt-tree-path.inactive-path {
-  stroke: #5f6368;
-  stroke-width: 2px;
-  stroke-dasharray: 4 4;
+.gt-edge-inactive {
+  stroke: rgba(148, 163, 184, 0.35);
+  stroke-width: 1.8px;
+  stroke-dasharray: 4 3;
+  stroke-linecap: round;
 }
 
-.gt-theme-light .gt-tree-path.inactive-path,
-body:not(.dark-theme):not(.theme-dark) .gt-tree-path.inactive-path {
-  stroke: #cbd5e1;
+.gt-theme-light .gt-edge-inactive,
+body:not(.dark-theme):not(.theme-dark) .gt-edge-inactive {
+  stroke: rgba(100, 116, 139, 0.35);
 }
 
-/* Punkty węzłów (Kropki) */
+/* Kontener pojedynczego węzła drzewa */
 .gt-tree-node-wrap {
   position: absolute;
   transform: translate(-50%, -50%);
-  z-index: 5;
-  user-select: none;
-}
-
-.gt-node-dot-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid #5f6368;
-  background: #2a2b2d;
-  color: #94a3b8;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Kropka / Węzeł */
+.gt-tree-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--gt-font);
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
   position: relative;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s, border-color 0.2s;
   padding: 0;
   outline: none;
+  border: 2px solid transparent;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease;
+  user-select: none;
 }
 
-.gt-theme-light .gt-node-dot-btn,
-body:not(.dark-theme):not(.theme-dark) .gt-node-dot-btn {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #64748b;
-}
-
-.gt-node-dot-btn:hover {
+.gt-tree-dot:hover {
   transform: scale(1.3);
   z-index: 10;
 }
 
-.gt-dot-number {
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
+/* Stan: Aktywna ścieżka */
+.gt-tree-dot.is-active {
+  background: #059669;
+  border-color: #34d399;
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
 }
 
-/* Aktywny punkt */
-.gt-tree-node-wrap.active .gt-node-dot-btn {
+/* Stan: Bieżący (gdzie użytkownik jest w tej chwili) */
+.gt-tree-dot.is-current {
   background: var(--gt-active-green, #10b981) !important;
   border-color: #ffffff !important;
   color: #ffffff !important;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.85) !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.85) !important;
+  transform: scale(1.15);
 }
 
-/* Inny punkt (alternatywa) */
-.gt-tree-node-wrap.other .gt-node-dot-btn {
-  background: #221f3b !important;
-  border-color: #8b5cf6 !important;
-  color: #c4b5fd !important;
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4) !important;
+.gt-tree-dot.is-current:hover {
+  transform: scale(1.35);
 }
 
-.gt-theme-light .gt-tree-node-wrap.other .gt-node-dot-btn,
-body:not(.dark-theme):not(.theme-dark) .gt-tree-node-wrap.other .gt-node-dot-btn {
-  background: #f5f3ff !important;
-  border-color: #8b5cf6 !important;
-  color: #7c3aed !important;
-}
-
-/* Punkt rozwidlenia */
-.gt-tree-node-wrap.fork .gt-node-dot-btn {
-  border-color: #f59e0b !important;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5) !important;
-}
-
-/* Pulsujący pierścień dla aktualnego węzła */
+/* Pulsujący pierścień dla bieżącego węzła */
 .gt-pulse-ring {
   position: absolute;
-  inset: -7px;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
   border-radius: 50%;
   border: 2px solid var(--gt-active-green, #10b981);
-  animation: gtPulseAnimation 2s infinite cubic-bezier(0.24, 0, 0.38, 1);
+  animation: gtPulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   pointer-events: none;
 }
 
-@keyframes gtPulseAnimation {
-  0% { transform: scale(0.7); opacity: 1; }
-  100% { transform: scale(1.7); opacity: 0; }
+@keyframes gtPulseRing {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  60% { transform: scale(1.45); opacity: 0; }
+  100% { transform: scale(0.9); opacity: 0; }
 }
 
-/* Tooltip węzła */
-.gt-node-tooltip {
+/* Stan: Alternatywna gałąź */
+.gt-tree-dot.is-alt {
+  background: #7c3aed;
+  border-color: #c4b5fd;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.3);
+}
+
+.gt-tree-dot.is-alt:hover {
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.7);
+}
+
+/* Stan: Węzeł początkowy (jeśli istnieje) */
+.gt-tree-dot.is-origin {
+  background: #334155;
+  border-color: #64748b;
+  font-size: 12px;
+}
+
+/* Wskaźnik rozgałęzienia na węźle */
+.gt-fork-badge {
   position: absolute;
-  bottom: calc(100% + 12px);
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gt-fork-amber, #f59e0b);
+  border: 1.5px solid #0f172a;
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.8);
+}
+
+/* Tooltip po najechaniu na kropkę */
+.gt-tree-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
-  background: #1e1f20;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   font-size: 11px;
-  color: #fff;
-  width: 220px;
+  color: #f8fafc;
+  width: 210px;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.15s ease, visibility 0.15s ease;
+  transition: opacity 0.15s ease, transform 0.15s ease;
   z-index: 9999;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  font-family: var(--gt-font);
 }
 
-.gt-theme-light .gt-node-tooltip,
-body:not(.dark-theme):not(.theme-dark) .gt-node-tooltip {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  color: #1e293b;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+.gt-tree-tooltip.align-left {
+  left: -8px;
+  transform: none;
 }
 
-.gt-tree-node-wrap:hover .gt-node-tooltip {
+.gt-tree-tooltip.align-right {
+  left: auto;
+  right: -8px;
+  transform: none;
+}
+
+.gt-tree-node-wrap:hover .gt-tree-tooltip {
   opacity: 1;
   visibility: visible;
-  pointer-events: auto;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.gt-tree-node-wrap:hover .gt-tree-tooltip.align-left {
+  transform: translateY(-2px);
+}
+
+.gt-tree-node-wrap:hover .gt-tree-tooltip.align-right {
+  transform: translateY(-2px);
 }
 
 .gt-tooltip-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.gt-tooltip-title {
+  font-weight: 700;
+  color: #93c5fd;
+  font-size: 11px;
 }
 
 .gt-tooltip-badge {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.gt-tooltip-badge.current {
+  background: rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.4);
 }
 
 .gt-tooltip-badge.active {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
+  background: rgba(5, 150, 105, 0.25);
+  color: #a7f3d0;
+  border: 1px solid rgba(5, 150, 105, 0.4);
 }
 
-.gt-tooltip-badge.other {
-  background: rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
-}
-
-.gt-tooltip-level {
-  font-size: 10px;
-  color: #94a3b8;
-  font-weight: 600;
+.gt-tooltip-badge.alt {
+  background: rgba(139, 92, 246, 0.25);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.4);
 }
 
 .gt-tooltip-snippet {
-  font-size: 11px;
-  line-height: 1.4;
   color: #cbd5e1;
-  background: rgba(0, 0, 0, 0.25);
-  padding: 6px 8px;
-  border-radius: 6px;
-  margin-bottom: 8px;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  margin-bottom: 6px;
+  font-weight: 400;
 }
 
-.gt-theme-light .gt-tooltip-snippet,
-body:not(.dark-theme):not(.theme-dark) .gt-tooltip-snippet {
-  background: #f1f5f9;
-  color: #334155;
-}
-
-.gt-tooltip-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.gt-tooltip-jump-btn {
-  flex: 1;
-  background: var(--gt-active-green, #10b981);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 4px 8px;
+.gt-tooltip-footer {
   font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.gt-tooltip-jump-btn:hover {
-  opacity: 0.9;
-}
-
-.gt-tooltip-branch-btn {
-  background: rgba(78, 128, 238, 0.18);
-  color: #8ab4f8;
-  border: 1px solid rgba(78, 128, 238, 0.35);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.gt-tooltip-branch-btn:hover {
-  background: rgba(78, 128, 238, 0.3);
+  color: #94a3b8;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 4px;
 }
 
 /* Flash animacja przeskoku */

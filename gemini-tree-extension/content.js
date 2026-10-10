@@ -173,7 +173,7 @@
       <div class="gt-drawer-header">
         <div class="gt-drawer-title-wrap">
           <span class="gt-drawer-icon-accent">${SVG_NETWORK}</span>
-          <h3>Drzewo Konwersacji Gemini <span class="gt-version-badge">v1.1</span></h3>
+          <h3>Drzewo Konwersacji Gemini</h3>
         </div>
         <div class="gt-drawer-actions-wrap">
           <button class="gt-drawer-action-btn" id="gt-drawer-clear-btn" title="Wyczyść wszystkie gałęzie w tej sesji">
@@ -202,7 +202,8 @@
         </div>
 
         <div class="gt-legend">
-          <div class="gt-legend-item"><span class="gt-legend-dot active"></span> Aktywna ścieżka</div>
+          <div class="gt-legend-item"><span class="gt-legend-dot active"></span> Aktywna</div>
+          <div class="gt-legend-item"><span class="gt-legend-dot current"></span> Jesteś tutaj</div>
           <div class="gt-legend-item"><span class="gt-legend-dot other"></span> Inne odnogi</div>
           <div class="gt-legend-item"><span class="gt-legend-dot fork"></span> Rozwidlenie</div>
         </div>
@@ -835,45 +836,73 @@
     }, 500);
   }
 
-  // --- Render True Hierarchical SVG Dot Tree Graph in Drawer ---
+  // --- Render Hierarchical Dot Tree Graph in Drawer ---
   function renderGraph() {
     const container = document.getElementById('gt-graph-content');
     if (!container) return;
 
+    // 1. Compute Active Path IDs (from current active leaf up to root)
     const activePathIds = new Set();
     let currId = currentTree.currentNodeId;
-    const pathVisited = new Set();
-    while (currId && currentTree.nodes[currId] && !pathVisited.has(currId)) {
-      pathVisited.add(currId);
+    while (currId && currentTree.nodes[currId] && !activePathIds.has(currId)) {
       activePathIds.add(currId);
       currId = currentTree.nodes[currId].parentId;
     }
 
-    // 1. Build hierarchy of turns
-    const visitedHierarchy = new Set();
-    function buildHierarchy(nodeId, depth = 1) {
-      if (!nodeId || visitedHierarchy.has(nodeId)) return null;
-      visitedHierarchy.add(nodeId);
+    // 2. Identify root nodes
+    const rootNode = currentTree.nodes[currentTree.rootId || 'root'] || currentTree.nodes['root'];
+    let rootChildrenIds = Array.from(new Set(rootNode?.childrenIds || []))
+      .filter(id => currentTree.nodes[id]);
 
-      const node = currentTree.nodes[nodeId];
-      if (!node || node.role === 'system') return null;
+    const totalUserNodes = Object.values(currentTree.nodes).filter(n => n.role === 'user').length;
+    const branchesCount = Object.values(currentTree.nodes).filter(n => (n.childrenIds || []).length > 1).length;
 
-      const validChildrenIds = (node.childrenIds || []).filter(cId => {
-        const c = currentTree.nodes[cId];
-        return c && c.role !== 'system' && !visitedHierarchy.has(cId);
-      });
+    // Resilient fallback: If root.childrenIds is empty but user nodes exist, find root-level queries
+    if (rootChildrenIds.length === 0 && totalUserNodes > 0) {
+      const allUser = Object.values(currentTree.nodes).filter(n => n.role === 'user');
+      const candidates = allUser.filter(n => !n.parentId || n.parentId === 'root' || !currentTree.nodes[n.parentId]);
+      rootChildrenIds = candidates.map(n => n.id);
+      if (rootNode) rootNode.childrenIds = rootChildrenIds;
+    }
 
-      const children = validChildrenIds
-        .map(cId => buildHierarchy(cId, depth + 1))
+    if (totalUserNodes === 0 || rootChildrenIds.length === 0) {
+      document.getElementById('gt-stat-nodes').textContent = '0';
+      document.getElementById('gt-stat-depth').textContent = '0';
+      document.getElementById('gt-stat-branches').textContent = '1';
+      container.innerHTML = `
+        <div class="gt-graph-empty">
+          <div style="font-size: 28px; margin-bottom: 10px;">🌱</div>
+          <div style="font-weight: 600; margin-bottom: 4px; color: var(--gt-text, #e2e8f0);">Brak gałęzi do wyświetlenia</div>
+          <div>Napisz prompt w Gemini lub użyj <b>🌿 Rozgałęź</b>, aby utworzyć alternatywną ścieżkę.</div>
+        </div>
+      `;
+      return;
+    }
+
+    // 3. Build hierarchical tree model
+    const visited = new Set();
+    function buildTreeNode(nodeId, depth = 1) {
+      if (visited.has(nodeId)) return null;
+      visited.add(nodeId);
+
+      const rawNode = currentTree.nodes[nodeId];
+      if (!rawNode) return null;
+
+      const validChildIds = Array.from(new Set(rawNode.childrenIds || []))
+        .filter(cId => currentTree.nodes[cId]);
+
+      const children = validChildIds
+        .map(cId => buildTreeNode(cId, depth + 1))
         .filter(Boolean);
 
-      const isActive = activePathIds.has(node.id);
-      const isCurrent = node.id === currentTree.currentNodeId;
+      const isActive = activePathIds.has(nodeId);
+      const isCurrent = nodeId === currentTree.currentNodeId;
       const isFork = children.length > 1;
 
       return {
-        id: node.id,
-        node,
+        id: nodeId,
+        rawNode,
+        content: rawNode.content || '',
         depth,
         isActive,
         isCurrent,
@@ -885,225 +914,234 @@
       };
     }
 
-    const rootNode = currentTree.nodes[currentTree.rootId || 'root'];
-    const rootChildrenIds = (rootNode?.childrenIds || []).filter(id => !!currentTree.nodes[id]);
-
-    let topNodeIds = rootChildrenIds;
-    if (topNodeIds.length === 0) {
-      topNodeIds = Object.values(currentTree.nodes)
-        .filter(n => n.role === 'user' && (!n.parentId || n.parentId === 'root' || !currentTree.nodes[n.parentId]))
-        .map(n => n.id);
+    let treeRoots = [];
+    if (rootChildrenIds.length === 1) {
+      const singleRoot = buildTreeNode(rootChildrenIds[0], 1);
+      if (singleRoot) treeRoots.push(singleRoot);
+    } else {
+      // First prompt was branched into alternatives: connect them from a clear start origin
+      const originChildren = rootChildrenIds.map(cId => buildTreeNode(cId, 2)).filter(Boolean);
+      treeRoots.push({
+        id: 'gt-root-origin',
+        rawNode: { id: 'gt-root-origin', role: 'system', content: 'Rozpoczęcie czatu' },
+        content: 'Rozpoczęcie czatu',
+        depth: 1,
+        isActive: true,
+        isCurrent: false,
+        isFork: originChildren.length > 1,
+        isOrigin: true,
+        children: originChildren,
+        width: 1,
+        x: 0,
+        y: 0
+      });
     }
 
-    const treeRoots = topNodeIds.map(id => buildHierarchy(id, 1)).filter(Boolean);
+    if (treeRoots.length === 0) return;
 
-    if (treeRoots.length === 0) {
-      document.getElementById('gt-stat-nodes').textContent = '0';
-      document.getElementById('gt-stat-depth').textContent = '0';
-      document.getElementById('gt-stat-branches').textContent = '1';
-      container.innerHTML = `
-        <div style="text-align: center; color: var(--gt-text-muted, #94a3b8); font-size: 13px; padding: 40px 10px;">
-          Brak wiadomości w tym czacie.<br>Napisz prompt w Gemini, aby rozpocząć drzewo.
-        </div>
-      `;
-      return;
-    }
-
-    // 2. Compute subtree leaf widths
-    function calculateSubtreeWidth(item) {
-      if (!item.children || item.children.length === 0) {
-        item.width = 1;
+    // 4. Calculate subtree widths (leaf columns)
+    function calculateWidths(node) {
+      if (!node.children || node.children.length === 0) {
+        node.width = 1;
         return 1;
       }
-      let total = 0;
-      for (const child of item.children) {
-        total += calculateSubtreeWidth(child);
+      let sum = 0;
+      for (const child of node.children) {
+        sum += calculateWidths(child);
       }
-      item.width = Math.max(1, total);
-      return item.width;
+      node.width = Math.max(1, sum);
+      return node.width;
     }
 
-    let totalColumns = 0;
+    let totalCols = 0;
     for (const root of treeRoots) {
-      totalColumns += calculateSubtreeWidth(root);
+      totalCols += calculateWidths(root);
     }
 
-    // 3. Assign 2D coordinates (x, y)
-    const ROW_HEIGHT = 72;
-    const COL_WIDTH = 56;
-    const PADDING_TOP = 42;
-    const PADDING_X = 36;
+    // 5. Layout & Position Assignment (Top-down hierarchical layout)
+    const ROW_HEIGHT = 70;
+    const COL_WIDTH = 58;
+    const PADDING_X = 32;
+    const PADDING_Y = 28;
 
-    let maxDepth = 1;
     const allRenderNodes = [];
     const allRenderEdges = [];
+    let maxDepth = 1;
 
-    function assignPositions(item, colOffset) {
-      if (item.depth > maxDepth) maxDepth = item.depth;
-      item.y = (item.depth - 1) * ROW_HEIGHT + PADDING_TOP;
-      allRenderNodes.push(item);
+    const containerWidth = Math.max(container.clientWidth || 340, 340);
+    const totalTreeWidth = totalCols * COL_WIDTH;
+    const stageWidth = Math.max(containerWidth, totalTreeWidth + PADDING_X * 2);
+    const startOffset = Math.max(PADDING_X, (stageWidth - totalTreeWidth) / 2);
 
-      if (!item.children || item.children.length === 0) {
-        item.x = (colOffset + 0.5) * COL_WIDTH;
-      } else {
-        let currentChildOffset = colOffset;
-        for (const child of item.children) {
-          assignPositions(child, currentChildOffset);
-          currentChildOffset += child.width;
+    function assignPositions(node, colOffset) {
+      const centerCol = colOffset + node.width / 2;
+      node.x = Math.round(startOffset + centerCol * COL_WIDTH);
+      node.y = Math.round((node.depth - 1) * ROW_HEIGHT + PADDING_Y);
 
-          allRenderEdges.push({
-            id: `${item.id}->${child.id}`,
-            from: item,
-            to: child,
-            isActive: item.isActive && child.isActive
-          });
-        }
+      if (node.depth > maxDepth) maxDepth = node.depth;
+      allRenderNodes.push(node);
 
-        const firstChild = item.children[0];
-        const lastChild = item.children[item.children.length - 1];
-        item.x = (firstChild.x + lastChild.x) / 2;
+      let currentOffset = colOffset;
+      for (const child of node.children) {
+        assignPositions(child, currentOffset);
+
+        allRenderEdges.push({
+          id: `${node.id}->${child.id}`,
+          from: { x: node.x, y: node.y },
+          to: { x: child.x, y: child.y },
+          isActive: node.isActive && child.isActive
+        });
+
+        currentOffset += child.width;
       }
     }
 
-    let currentOffset = 0;
+    let offset = 0;
     for (const root of treeRoots) {
-      assignPositions(root, currentOffset);
-      currentOffset += root.width;
+      assignPositions(root, offset);
+      offset += root.width;
     }
 
-    // 4. Dimensions and centering
-    const contentWidth = totalColumns * COL_WIDTH;
-    const stageWidth = Math.max(330, contentWidth + PADDING_X * 2);
-    const stageHeight = maxDepth * ROW_HEIGHT + 50;
-    const shiftX = Math.max(PADDING_X, (stageWidth - contentWidth) / 2);
+    const stageHeight = maxDepth * ROW_HEIGHT + PADDING_Y * 2;
 
-    // 5. Update stats
-    const totalUserNodes = Object.values(currentTree.nodes).filter(n => n.role === 'user').length;
-    const branchesCount = Object.values(currentTree.nodes).filter(n => (n.childrenIds || []).length > 1).length;
+    // Update stats bar
     document.getElementById('gt-stat-nodes').textContent = totalUserNodes.toString();
     document.getElementById('gt-stat-depth').textContent = maxDepth.toString();
     document.getElementById('gt-stat-branches').textContent = (branchesCount + 1).toString();
 
-    // 6. Build DOM
+    // 6. Build Stage DOM
     container.innerHTML = '';
+    const stageEl = document.createElement('div');
+    stageEl.className = 'gt-tree-stage';
+    stageEl.style.width = `${stageWidth}px`;
+    stageEl.style.height = `${stageHeight}px`;
 
-    const stage = document.createElement('div');
-    stage.className = 'gt-tree-stage';
-    stage.style.width = `${stageWidth}px`;
-    stage.style.height = `${stageHeight}px`;
-
-    // A. Depth Grid Lines in background
-    const gridContainer = document.createElement('div');
-    gridContainer.className = 'gt-depth-grid';
+    // Background horizontal depth guidelines
     for (let d = 1; d <= maxDepth; d++) {
-      const lineY = (d - 1) * ROW_HEIGHT + PADDING_TOP;
-      const lineEl = document.createElement('div');
-      lineEl.className = 'gt-depth-line';
-      lineEl.style.top = `${lineY}px`;
-      lineEl.innerHTML = `<span class="gt-depth-tag">Poziom ${d}</span>`;
-      gridContainer.appendChild(lineEl);
+      const guideY = (d - 1) * ROW_HEIGHT + PADDING_Y;
+      const guideEl = document.createElement('div');
+      guideEl.className = 'gt-level-guide';
+      guideEl.style.top = `${guideY}px`;
+      stageEl.appendChild(guideEl);
     }
-    stage.appendChild(gridContainer);
 
-    // B. SVG Layer for Paths/Edges
-    const svgNS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('class', 'gt-tree-svg');
-    svg.setAttribute('width', stageWidth.toString());
-    svg.setAttribute('height', stageHeight.toString());
-    svg.innerHTML = `
-      <defs>
-        <filter id="gt-active-glow" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="3" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
-      </defs>
+    // SVG Connecting Edges (Bezier curves directly from Parent to Child)
+    const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svgEl.setAttribute('class', 'gt-tree-svg');
+    svgEl.setAttribute('width', stageWidth.toString());
+    svgEl.setAttribute('height', stageHeight.toString());
+
+    // Glow filter for active path
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.innerHTML = `
+      <filter id="gt-active-glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="3" result="glow" />
+        <feMerge>
+          <feMergeNode in="glow" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
     `;
+    svgEl.appendChild(defs);
 
     allRenderEdges.forEach(edge => {
-      const fromX = edge.from.x + shiftX;
-      const fromY = edge.from.y;
-      const toX = edge.to.x + shiftX;
-      const toY = edge.to.y;
-      const midY = (fromY + toY) / 2;
-
-      const d = `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`;
-      const path = document.createElementNS(svgNS, 'path');
-      path.setAttribute('d', d);
-      path.setAttribute('class', `gt-tree-path ${edge.isActive ? 'active-path' : 'inactive-path'}`);
+      const cpY = Math.round((edge.from.y + edge.to.y) / 2);
+      const d = `M ${edge.from.x} ${edge.from.y} C ${edge.from.x} ${cpY}, ${edge.to.x} ${cpY}, ${edge.to.x} ${edge.to.y}`;
+      const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      pathEl.setAttribute('d', d);
+      pathEl.setAttribute('class', `gt-tree-edge ${edge.isActive ? 'gt-edge-active' : 'gt-edge-inactive'}`);
       if (edge.isActive) {
-        path.setAttribute('filter', 'url(#gt-active-glow)');
+        pathEl.setAttribute('filter', 'url(#gt-active-glow)');
       }
-      svg.appendChild(path);
+      svgEl.appendChild(pathEl);
     });
-    stage.appendChild(svg);
+    stageEl.appendChild(svgEl);
 
-    // C. Interactive Node Dots
-    allRenderNodes.forEach(item => {
-      const nodeX = item.x + shiftX;
-      const nodeY = item.y;
-
+    // Nodes (Dots with tooltips and jump-to actions)
+    allRenderNodes.forEach(node => {
       const nodeWrap = document.createElement('div');
-      let wrapClass = 'gt-tree-node-wrap';
-      if (item.isCurrent) wrapClass += ' current';
-      if (item.isActive) wrapClass += ' active';
-      else if (item.isFork) wrapClass += ' fork';
-      else wrapClass += ' other';
+      nodeWrap.className = 'gt-tree-node-wrap';
+      nodeWrap.style.left = `${node.x}px`;
+      nodeWrap.style.top = `${node.y}px`;
 
-      nodeWrap.className = wrapClass;
-      nodeWrap.style.left = `${nodeX}px`;
-      nodeWrap.style.top = `${nodeY}px`;
+      let dotClass = 'gt-tree-dot';
+      if (node.isCurrent) dotClass += ' is-current';
+      else if (node.isActive) dotClass += ' is-active';
+      else dotClass += ' is-alt';
 
-      // Smart tooltip placement to avoid clipping
-      let tooltipStyle = '';
-      if (item.depth === 1) {
-        tooltipStyle += 'top: calc(100% + 12px); bottom: auto;';
+      if (node.isFork) dotClass += ' is-fork';
+      if (node.isOrigin) dotClass += ' is-origin';
+
+      const dotBtn = document.createElement('button');
+      dotBtn.className = dotClass;
+      dotBtn.setAttribute('title', node.isOrigin ? 'Początek czatu' : 'Kliknij, aby przeskoczyć do tej gałęzi');
+
+      // Inner number or origin icon
+      if (node.isOrigin) {
+        dotBtn.innerHTML = '🌱';
+      } else {
+        dotBtn.innerHTML = `<span>${node.depth}</span>`;
       }
-      if (nodeX < 120) {
-        tooltipStyle += ' left: 0; transform: none;';
-      } else if (nodeX > stageWidth - 120) {
-        tooltipStyle += ' right: 0; left: auto; transform: none;';
+
+      // Current active leaf: animated pulsing ring
+      if (node.isCurrent) {
+        const pulse = document.createElement('span');
+        pulse.className = 'gt-pulse-ring';
+        dotBtn.appendChild(pulse);
       }
 
-      const snippet = item.node.content || 'Wiadomość użytkownika';
+      // Fork node: fork badge
+      if (node.isFork) {
+        const forkIndicator = document.createElement('span');
+        forkIndicator.className = 'gt-fork-badge';
+        forkIndicator.title = `Rozgałęzienie: ${node.children.length} gałęzie`;
+        dotBtn.appendChild(forkIndicator);
+      }
 
-      nodeWrap.innerHTML = `
-        <button class="gt-node-dot-btn" title="Poziom ${item.depth} - Kliknij, aby przejść do tej gałęzi">
-          <span class="gt-dot-number">${item.depth}</span>
-          ${item.isCurrent ? '<span class="gt-pulse-ring"></span>' : ''}
-        </button>
-        <div class="gt-node-tooltip" style="${tooltipStyle}">
-          <div class="gt-tooltip-header">
-            <span class="gt-tooltip-badge ${item.isActive ? 'active' : 'other'}">
-              ${item.isActive ? 'Bieżąca ścieżka' : 'Wersja alternatywna'}
-            </span>
-            <span class="gt-tooltip-level">Poziom ${item.depth}</span>
-          </div>
-          <div class="gt-tooltip-snippet">${escapeHtml(snippet.slice(0, 100))}</div>
-          <div class="gt-tooltip-actions">
-            <button class="gt-tooltip-jump-btn">Przejdź tutaj</button>
-            <button class="gt-tooltip-branch-btn">🌿 Rozgałęź</button>
-          </div>
+      // Tooltip
+      const tooltip = document.createElement('div');
+      let tooltipClass = 'gt-tree-tooltip';
+      if (node.x < 110) tooltipClass += ' align-left';
+      else if (stageWidth - node.x < 110) tooltipClass += ' align-right';
+      tooltip.className = tooltipClass;
+
+      let badgeText = 'Inna gałąź';
+      let badgeClass = 'alt';
+      if (node.isCurrent) {
+        badgeText = 'Jesteś tutaj';
+        badgeClass = 'current';
+      } else if (node.isActive) {
+        badgeText = 'Aktywna ścieżka';
+        badgeClass = 'active';
+      }
+
+      const snippet = (node.content || '').trim().slice(0, 130);
+      const hint = node.isCurrent 
+        ? '✓ Wyświetlana w oknie czatu' 
+        : (node.isOrigin ? 'Początek rozmowy' : '👉 Kliknij punkt, aby przeskoczyć');
+
+      tooltip.innerHTML = `
+        <div class="gt-tooltip-header">
+          <span class="gt-tooltip-title">${node.isOrigin ? 'Początek czatu' : `Krok #${node.depth}`}</span>
+          <span class="gt-tooltip-badge ${badgeClass}">${badgeText}</span>
         </div>
+        <div class="gt-tooltip-snippet">${escapeHtml(snippet) || '<em>(Brak treści promptu)</em>'}</div>
+        <div class="gt-tooltip-footer">${hint}</div>
       `;
 
-      nodeWrap.querySelector('.gt-node-dot-btn').onclick = (e) => {
+      nodeWrap.appendChild(dotBtn);
+      nodeWrap.appendChild(tooltip);
+
+      dotBtn.onclick = (e) => {
         e.stopPropagation();
-        jumpToNode(item.id);
-      };
-      nodeWrap.querySelector('.gt-tooltip-jump-btn').onclick = (e) => {
-        e.stopPropagation();
-        jumpToNode(item.id);
-      };
-      nodeWrap.querySelector('.gt-tooltip-branch-btn').onclick = (e) => {
-        e.stopPropagation();
-        onBranchOffClick(snippet);
+        if (node.isOrigin) return;
+        jumpToNode(node.id);
       };
 
-      stage.appendChild(nodeWrap);
+      stageEl.appendChild(nodeWrap);
     });
 
-    container.appendChild(stage);
+    container.appendChild(stageEl);
   }
 
   function jumpToNode(nodeId) {
@@ -1171,7 +1209,6 @@
 
   // --- Initialization ---
   async function init() {
-    console.log('%c[Gemini Tree] Extension v1.1.0 loaded successfully!', 'color: #10b981; font-weight: bold;');
     await checkMasterEnabled();
     if (!isExtensionEnabled) return;
 
