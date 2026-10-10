@@ -32,17 +32,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Check current active tab
+  let activeTabId = null;
   let currentChatKey = null;
+
   try {
     const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (activeTab && activeTab.url && activeTab.url.includes('gemini.google.com')) {
+      activeTabId = activeTab.id;
       const match = activeTab.url.match(/\/app\/([a-zA-Z0-9_-]+)/);
-      const chatId = match ? match[1] : 'current_session';
+      const chatId = match ? `chat_${match[1]}` : 'current_session';
       currentChatKey = `geminitree_data_${chatId}`;
-      chatIdLabel.textContent = `Sesja: ${chatId.length > 18 ? chatId.slice(0, 18) + '...' : chatId}`;
+      chatIdLabel.textContent = `Sesja: ${match ? match[1].slice(0, 16) + '...' : 'Bieżąca'}`;
 
-      const data = await chrome.storage.local.get(currentChatKey);
-      const tree = data[currentChatKey];
+      // Check both keys with and without prefix just in case
+      const allData = await chrome.storage.local.get(null);
+      const tree = allData[currentChatKey] || allData[`geminitree_data_${match ? match[1] : ''}`];
+
       if (tree && tree.nodes) {
         const userNodes = Object.values(tree.nodes).filter(n => n.role === 'user');
         const branches = Object.values(tree.nodes).filter(n => (n.childrenIds || []).length > 1);
@@ -68,15 +73,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Button: Clear current tree
   btnClearCurrent.addEventListener('click', async () => {
-    if (currentChatKey) {
-      if (confirm('Czy na pewno chcesz wyczyścić drzewo rozgałęzień dla tej rozmowy?')) {
-        await chrome.storage.local.remove(currentChatKey);
-        statNodesEl.textContent = '0';
-        statBranchesEl.textContent = '1';
-        alert('Wyczyszczono drzewo tego czatu. Odśwież stronę Gemini, aby rozpocząć od nowa.');
+    if (!confirm('Czy na pewno chcesz wyczyścić wszystkie gałęzie i zresetować to drzewo?')) {
+      return;
+    }
+
+    try {
+      // 1. Send live message to active tab to clear in-memory state & DOM
+      if (activeTabId) {
+        try {
+          await chrome.tabs.sendMessage(activeTabId, { action: 'CLEAR_TREE' });
+        } catch (mErr) {
+          console.log('Content script message not delivered, removing from storage:', mErr);
+        }
       }
-    } else {
-      alert('Przejdź najpierw na kartę z otwartym czatem gemini.google.com');
+
+      // 2. Remove all related keys from chrome.storage.local
+      const all = await chrome.storage.local.get(null);
+      const keysToRemove = Object.keys(all).filter(k => k.startsWith('geminitree_data_'));
+      if (keysToRemove.length > 0) {
+        await chrome.storage.local.remove(keysToRemove);
+      }
+
+      statNodesEl.textContent = '0';
+      statBranchesEl.textContent = '1';
+      alert('✓ Pomyślnie wyczyszczono gałęzie!');
+    } catch (err) {
+      console.error('Błąd podczas czyszczenia:', err);
+      alert('Wystąpił błąd podczas czyszczenia: ' + err.message);
     }
   });
 });

@@ -165,9 +165,15 @@
           <span class="gt-drawer-icon-accent">${SVG_NETWORK}</span>
           <h3>Drzewo Konwersacji Gemini</h3>
         </div>
-        <button class="gt-drawer-close-btn" id="gt-drawer-close" title="Zamknij panel">
-          ${SVG_CLOSE}
-        </button>
+        <div class="gt-drawer-actions-wrap">
+          <button class="gt-drawer-action-btn" id="gt-drawer-clear-btn" title="Wyczyść wszystkie gałęzie w tej sesji">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span>Wyczyść</span>
+          </button>
+          <button class="gt-drawer-close-btn" id="gt-drawer-close" title="Zamknij panel">
+            ${SVG_CLOSE}
+          </button>
+        </div>
       </div>
       <div class="gt-drawer-body">
         <div class="gt-stats-bar">
@@ -199,6 +205,54 @@
 
     document.body.appendChild(drawer);
     document.getElementById('gt-drawer-close').onclick = toggleDrawer;
+    document.getElementById('gt-drawer-clear-btn').onclick = () => clearCurrentTree(false);
+  }
+
+  // --- Clear / Reset Tree for Current Chat ---
+  async function clearCurrentTree(skipConfirm = false) {
+    if (!skipConfirm) {
+      if (!confirm('Czy na pewno chcesz wyczyścić wszystkie gałęzie w tej rozmowie i przywrócić pierwotny widok czatu?')) {
+        return;
+      }
+    }
+
+    try {
+      // 1. Remove storage for current chat
+      if (activeChatId) {
+        const key = getStorageKey(activeChatId);
+        await chrome.storage.local.remove(key);
+      }
+      const all = await chrome.storage.local.get(null);
+      const related = Object.keys(all).filter(k => (activeChatId && k.includes(activeChatId)) || k === 'geminitree_data_default');
+      if (related.length > 0) {
+        await chrome.storage.local.remove(related);
+      }
+
+      // 2. Reset in-memory state
+      currentTree = createEmptyTree(activeChatId);
+      branchingFromNode = null;
+
+      // 3. Clean up DOM elements
+      document.getElementById('gt-branch-banner-root')?.replaceChildren();
+      document.querySelectorAll('.gt-version-pill-container').forEach(p => p.remove());
+      document.querySelectorAll('.gt-branch-action-btn').forEach(b => b.remove());
+      document.querySelectorAll('[data-gt-injected]').forEach(el => delete el.dataset.gtInjected);
+      document.querySelectorAll('[data-gt-node-id]').forEach(el => el.removeAttribute('data-gt-node-id'));
+      document.querySelectorAll('.gt-hidden-turn').forEach(el => el.classList.remove('gt-hidden-turn'));
+
+      // 4. Update UI
+      updateBadge();
+      renderGraph();
+
+      // 5. Toast notice
+      const toast = document.createElement('div');
+      toast.className = 'gt-toast-notice';
+      toast.textContent = '✓ Pomyślnie wyczyszczono gałęzie czatu!';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2600);
+    } catch (err) {
+      console.warn('Error clearing tree:', err);
+    }
   }
 
   function toggleDrawer() {
@@ -519,10 +573,17 @@
           if (!sNode) return '';
           const isAct = sId === node.id;
           return `
-            <button class="gt-version-dropdown-item ${isAct ? 'active' : ''}" data-node-id="${sId}">
-              <span class="gt-item-badge">#${sIdx + 1}</span>
-              <span class="gt-item-text">${escapeHtml(sNode.content)}</span>
-            </button>
+            <div class="gt-version-dropdown-item ${isAct ? 'active' : ''}">
+              <div class="gt-version-item-click" data-node-id="${sId}" style="display: flex; align-items: center; gap: 8px; flex: 1; cursor: pointer;">
+                <span class="gt-item-badge">#${sIdx + 1}</span>
+                <span class="gt-item-text">${escapeHtml(sNode.content)}</span>
+              </div>
+              ${siblings.length > 1 ? `
+                <button class="gt-version-delete-btn" data-delete-id="${sId}" title="Usuń tę wersję gałęzi">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              ` : ''}
+            </div>
           `;
         }).join('')}
       </div>
@@ -544,7 +605,7 @@
       dropdown.style.display = dropdown.style.display !== 'none' ? 'none' : 'flex';
     });
 
-    dropdown?.querySelectorAll('.gt-version-dropdown-item').forEach(item => {
+    dropdown?.querySelectorAll('.gt-version-item-click').forEach(item => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         const targetId = item.getAttribute('data-node-id');
@@ -554,6 +615,50 @@
         }
       });
     });
+
+    dropdown?.querySelectorAll('.gt-version-delete-btn').forEach(delBtn => {
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const targetId = delBtn.getAttribute('data-delete-id');
+        deleteSpecificBranch(node.parentId, targetId);
+      });
+    });
+  }
+
+  function deleteSpecificBranch(parentId, childIdToDelete) {
+    const parentNode = currentTree.nodes[parentId];
+    if (!parentNode || !parentNode.childrenIds) return;
+
+    if (!confirm('Czy na pewno chcesz usunąć tę wersję gałęzi?')) return;
+
+    parentNode.childrenIds = parentNode.childrenIds.filter(id => id !== childIdToDelete);
+
+    if (parentNode.activeChildId === childIdToDelete) {
+      parentNode.activeChildId = parentNode.childrenIds[0] || null;
+    }
+
+    // Recursively delete nodes
+    const toDelete = [childIdToDelete];
+    while (toDelete.length > 0) {
+      const id = toDelete.pop();
+      const n = currentTree.nodes[id];
+      if (n) {
+        (n.childrenIds || []).forEach(cId => toDelete.push(cId));
+        delete currentTree.nodes[id];
+      }
+    }
+
+    let curr = parentNode.id;
+    while (currentTree.nodes[curr] && currentTree.nodes[curr].activeChildId) {
+      curr = currentTree.nodes[curr].activeChildId;
+    }
+    currentTree.currentNodeId = curr;
+
+    saveTree();
+    applyBranchVisibility();
+    updateBadge();
+    if (drawerOpen) renderGraph();
+    triggerDebouncedScan();
   }
 
   function switchBranch(parentId, targetIndex) {
@@ -846,7 +951,15 @@
       }
     });
 
-    observer.observe(chatContainer, { childList: true, subtree: true });
+    // Message listener for live actions from popup
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.action === 'CLEAR_TREE') {
+        clearCurrentTree(true).then(() => {
+          sendResponse({ success: true });
+        });
+        return true;
+      }
+    });
   }
 
   if (document.readyState === 'loading') {
