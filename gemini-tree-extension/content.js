@@ -18,6 +18,224 @@
   const SVG_CHEVRON_LEFT = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>`;
   const SVG_CHEVRON_RIGHT = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>`;
 
+  // --- Localization Engine (EN / PL) ---
+  const I18N = {
+    en: {
+      btnFloating: 'Branch Tree',
+      btnFloatingTitle: 'Toggle Gemini Tree conversation branches panel',
+      drawerTitle: 'Gemini Conversation Tree',
+      drawerResizerTitle: 'Drag left edge to resize panel',
+      drawerClearBtn: 'Clear',
+      drawerClearTitle: 'Clear all conversation branches in this session',
+      drawerCloseTitle: 'Close panel',
+      statNodes: 'Nodes',
+      statLevels: 'Levels',
+      statBranches: 'Branches',
+      legendActive: 'Active',
+      legendCurrent: 'You are here',
+      legendOther: 'Other branches',
+      legendFork: 'Fork',
+      zoomInTitle: 'Zoom In (+)',
+      zoomOutTitle: 'Zoom Out (-)',
+      zoomFitBtn: 'Fit',
+      zoomFitTitle: 'Automatically fit tree to window',
+      zoomAutoBadge: (pct) => `Auto (${pct}%)`,
+      zoomDisplayTitle: 'Click to toggle Auto / 100%',
+      clearConfirm: 'Are you sure you want to clear all branches and reset the conversation tree for this session?',
+      clearToast: '✓ Conversation branches cleared successfully!',
+      branchBtn: 'Branch',
+      branchBtnTitle: 'Create a new branch (alternative prompt at this conversation turn)',
+      bannerTitle: 'New branch:',
+      bannerText: (snippet) => `Branching off from «${snippet}». Your next sent prompt will create an alternative branch.`,
+      bannerCancel: 'Cancel',
+      pillVersion: (curr, total) => `Version ${curr} of ${total}`,
+      pillPrevTitle: 'Previous version',
+      pillNextTitle: 'Next version',
+      pillDropdownTitle: 'Click to expand versions',
+      pillDeleteTitle: 'Delete this branch version',
+      pillDeleteConfirm: 'Are you sure you want to delete this branch version?',
+      emptyTitle: 'No branches to display yet',
+      emptyDesc: 'Write a prompt in Gemini or use <b>🌿 Branch</b> to create an alternative branch path.',
+      chatOrigin: 'Chat Start',
+      chatTurn: (num) => `Turn #${num}`,
+      badgeCurrent: 'You are here',
+      badgeActive: 'Active path',
+      badgeOther: 'Other branch',
+      tooltipHintCurrent: '✓ Displayed in chat window',
+      tooltipHintOrigin: 'Start of conversation',
+      tooltipHintJump: '👉 Click dot to switch to this branch',
+      tooltipNoContent: '(No prompt text)',
+      tooltipBranchAction: 'Branch from this turn',
+      tooltipForkCount: (cnt) => `Fork: ${cnt} branches`,
+      dotJumpTitle: 'Click to switch to this branch',
+      langToggleTitle: 'Switch language / Zmień język (EN / PL)',
+      langLabel: 'EN'
+    },
+    pl: {
+      btnFloating: 'Drzewo Gałęzi',
+      btnFloatingTitle: 'Włącz/wyłącz podgląd drzewa konwersacji (Gemini Tree)',
+      drawerTitle: 'Drzewo Konwersacji Gemini',
+      drawerResizerTitle: 'Przeciągnij lewą krawędź, aby rozszerzyć panel',
+      drawerClearBtn: 'Wyczyść',
+      drawerClearTitle: 'Wyczyść wszystkie gałęzie w tej sesji',
+      drawerCloseTitle: 'Zamknij panel',
+      statNodes: 'Węzłów',
+      statLevels: 'Poziomów',
+      statBranches: 'Gałęzi',
+      legendActive: 'Aktywna',
+      legendCurrent: 'Jesteś tutaj',
+      legendOther: 'Inne odnogi',
+      legendFork: 'Rozwidlenie',
+      zoomInTitle: 'Powiększ (+)',
+      zoomOutTitle: 'Zmniejsz (-)',
+      zoomFitBtn: 'Dopasuj',
+      zoomFitTitle: 'Automatycznie dopasuj całe drzewo do okna',
+      zoomAutoBadge: (pct) => `Auto (${pct}%)`,
+      zoomDisplayTitle: 'Kliknij, aby przełączyć Auto / 100%',
+      clearConfirm: 'Czy na pewno chcesz wyczyścić wszystkie gałęzie w tej rozmowie i przywrócić pierwotny widok czatu?',
+      clearToast: '✓ Pomyślnie wyczyszczono gałęzie czatu!',
+      branchBtn: 'Rozgałęź',
+      branchBtnTitle: 'Stwórz nową gałąź (alternatywne pytanie na tym poziomie konwersacji)',
+      bannerTitle: 'Nowa gałąź:',
+      bannerText: (snippet) => `Rozgałęziasz z pytania «${snippet}». Następny wysłany prompt utworzy alternatywną odnogę.`,
+      bannerCancel: 'Anuluj',
+      pillVersion: (curr, total) => `Wersja ${curr} z ${total}`,
+      pillPrevTitle: 'Poprzednia wersja',
+      pillNextTitle: 'Następna wersja',
+      pillDropdownTitle: 'Kliknij, aby rozwinąć wersje',
+      pillDeleteTitle: 'Usuń tę wersję gałęzi',
+      pillDeleteConfirm: 'Czy na pewno chcesz usunąć tę wersję gałęzi?',
+      emptyTitle: 'Brak gałęzi do wyświetlenia',
+      emptyDesc: 'Napisz prompt w Gemini lub użyj <b>🌿 Rozgałęź</b>, aby utworzyć alternatywną ścieżkę.',
+      chatOrigin: 'Początek czatu',
+      chatTurn: (num) => `Krok #${num}`,
+      badgeCurrent: 'Jesteś tutaj',
+      badgeActive: 'Aktywna ścieżka',
+      badgeOther: 'Inna gałąź',
+      tooltipHintCurrent: '✓ Wyświetlana w oknie czatu',
+      tooltipHintOrigin: 'Początek rozmowy',
+      tooltipHintJump: '👉 Kliknij punkt, aby przeskoczyć',
+      tooltipNoContent: '(Brak treści promptu)',
+      tooltipBranchAction: 'Rozgałęź z tego kroku',
+      tooltipForkCount: (cnt) => `Rozgałęzienie: ${cnt} gałęzie`,
+      dotJumpTitle: 'Kliknij, aby przeskoczyć do tej gałęzi',
+      langToggleTitle: 'Zmień język / Switch language (PL / EN)',
+      langLabel: 'PL'
+    }
+  };
+
+  let currentLanguage = 'en';
+
+  async function initLanguage() {
+    try {
+      const res = await chrome.storage.local.get('gt_language');
+      if (res && res.gt_language) {
+        currentLanguage = res.gt_language;
+      } else {
+        const navLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+        currentLanguage = navLang.startsWith('pl') ? 'pl' : 'en';
+      }
+    } catch (e) {
+      currentLanguage = 'en';
+    }
+  }
+
+  function t(key, ...args) {
+    const dict = I18N[currentLanguage] || I18N['en'];
+    const val = dict[key] !== undefined ? dict[key] : (I18N['en'][key] !== undefined ? I18N['en'][key] : key);
+    if (typeof val === 'function') {
+      return val(...args);
+    }
+    return val;
+  }
+
+  async function toggleLanguage() {
+    currentLanguage = currentLanguage === 'en' ? 'pl' : 'en';
+    try {
+      await chrome.storage.local.set({ gt_language: currentLanguage });
+    } catch (e) {}
+    updateAllLocalizedUI();
+  }
+
+  function updateAllLocalizedUI() {
+    // 1. Floating button
+    const topbarBtn = document.getElementById('gt-topbar-btn');
+    if (topbarBtn) {
+      topbarBtn.setAttribute('title', t('btnFloatingTitle'));
+      const txt = topbarBtn.querySelector('span:first-of-type');
+      if (txt) txt.textContent = t('btnFloating');
+    }
+
+    // 2. Drawer texts
+    const titleEl = document.getElementById('gt-drawer-title');
+    if (titleEl) titleEl.textContent = t('drawerTitle');
+
+    const resizer = document.getElementById('gt-drawer-resizer');
+    if (resizer) resizer.setAttribute('title', t('drawerResizerTitle'));
+
+    const clearBtn = document.getElementById('gt-drawer-clear-btn');
+    if (clearBtn) {
+      clearBtn.setAttribute('title', t('drawerClearTitle'));
+      const clearSpan = document.getElementById('gt-clear-btn-text');
+      if (clearSpan) clearSpan.textContent = t('drawerClearBtn');
+    }
+
+    const closeBtn = document.getElementById('gt-drawer-close');
+    if (closeBtn) closeBtn.setAttribute('title', t('drawerCloseTitle'));
+
+    const langBtn = document.getElementById('gt-lang-btn');
+    if (langBtn) {
+      langBtn.setAttribute('title', t('langToggleTitle'));
+      const langTxt = document.getElementById('gt-lang-text');
+      if (langTxt) langTxt.textContent = currentLanguage.toUpperCase();
+    }
+
+    // Stats labels
+    const lblNodes = document.getElementById('gt-stat-lbl-nodes');
+    if (lblNodes) lblNodes.textContent = t('statNodes');
+    const lblLevels = document.getElementById('gt-stat-lbl-levels');
+    if (lblLevels) lblLevels.textContent = t('statLevels');
+    const lblBranches = document.getElementById('gt-stat-lbl-branches');
+    if (lblBranches) lblBranches.textContent = t('statBranches');
+
+    // Legend
+    const legActive = document.getElementById('gt-leg-active');
+    if (legActive) legActive.textContent = t('legendActive');
+    const legCurrent = document.getElementById('gt-leg-current');
+    if (legCurrent) legCurrent.textContent = t('legendCurrent');
+    const legOther = document.getElementById('gt-leg-other');
+    if (legOther) legOther.textContent = t('legendOther');
+    const legFork = document.getElementById('gt-leg-fork');
+    if (legFork) legFork.textContent = t('legendFork');
+
+    // Zoom controls
+    const zOut = document.getElementById('gt-zoom-out');
+    if (zOut) zOut.setAttribute('title', t('zoomOutTitle'));
+    const zIn = document.getElementById('gt-zoom-in');
+    if (zIn) zIn.setAttribute('title', t('zoomInTitle'));
+    const zFit = document.getElementById('gt-zoom-fit');
+    if (zFit) {
+      zFit.setAttribute('title', t('zoomFitTitle'));
+      const zFitSpan = zFit.querySelector('span');
+      if (zFitSpan) zFitSpan.textContent = t('zoomFitBtn');
+    }
+    const zDisp = document.getElementById('gt-zoom-display');
+    if (zDisp) zDisp.setAttribute('title', t('zoomDisplayTitle'));
+
+    // Re-render banner, graph, message pills & branch buttons
+    if (branchingFromNode) renderBranchBanner();
+    if (drawerOpen) renderGraph();
+
+    document.querySelectorAll('.gt-branch-action-btn').forEach(btn => {
+      btn.setAttribute('title', t('branchBtnTitle'));
+      const span = btn.querySelector('span');
+      if (span) span.textContent = t('branchBtn');
+    });
+
+    document.querySelectorAll('.gt-version-pill-container').forEach(c => c.remove());
+    scanGeminiMessages();
+  }
+
   // --- State ---
   let isExtensionEnabled = true;
   let activeChatId = null;
@@ -149,8 +367,8 @@
     const btn = document.createElement('button');
     btn.id = 'gt-topbar-btn';
     btn.className = 'gt-topbar-button gt-floating-toggle-btn';
-    btn.innerHTML = `${SVG_NETWORK} <span>Drzewo Gałęzi</span> <span id="gt-branch-badge" class="gt-topbar-badge">0</span>`;
-    btn.title = 'Włącz/wyłącz podgląd drzewa konwersacji (Gemini Tree)';
+    btn.innerHTML = `${SVG_NETWORK} <span>${t('btnFloating')}</span> <span id="gt-branch-badge" class="gt-topbar-badge">0</span>`;
+    btn.title = t('btnFloatingTitle');
     btn.onclick = toggleDrawer;
 
     document.body.appendChild(btn);
@@ -174,18 +392,21 @@
     drawer.id = 'gt-drawer';
     drawer.className = 'gt-drawer';
     drawer.innerHTML = `
-      <div id="gt-drawer-resizer" class="gt-drawer-resizer" title="Przeciągnij lewą krawędź, aby rozszerzyć panel"></div>
+      <div id="gt-drawer-resizer" class="gt-drawer-resizer" title="${t('drawerResizerTitle')}"></div>
       <div class="gt-drawer-header">
         <div class="gt-drawer-title-wrap">
           <span class="gt-drawer-icon-accent">${SVG_NETWORK}</span>
-          <h3>Drzewo Konwersacji Gemini</h3>
+          <h3 id="gt-drawer-title">${t('drawerTitle')}</h3>
         </div>
         <div class="gt-drawer-actions-wrap">
-          <button class="gt-drawer-action-btn" id="gt-drawer-clear-btn" title="Wyczyść wszystkie gałęzie w tej sesji">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            <span>Wyczyść</span>
+          <button class="gt-lang-btn" id="gt-lang-btn" title="${t('langToggleTitle')}">
+            <span>🌐</span> <b id="gt-lang-text">${currentLanguage.toUpperCase()}</b>
           </button>
-          <button class="gt-drawer-close-btn" id="gt-drawer-close" title="Zamknij panel">
+          <button class="gt-drawer-action-btn" id="gt-drawer-clear-btn" title="${t('drawerClearTitle')}">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <span id="gt-clear-btn-text">${t('drawerClearBtn')}</span>
+          </button>
+          <button class="gt-drawer-close-btn" id="gt-drawer-close" title="${t('drawerCloseTitle')}">
             ${SVG_CLOSE}
           </button>
         </div>
@@ -194,36 +415,36 @@
         <div class="gt-stats-bar">
           <div class="gt-stat-item">
             <span class="gt-stat-value" id="gt-stat-nodes">0</span>
-            <span class="gt-stat-label">Węzłów</span>
+            <span class="gt-stat-label" id="gt-stat-lbl-nodes">${t('statNodes')}</span>
           </div>
           <div class="gt-stat-item">
             <span class="gt-stat-value" id="gt-stat-depth">0</span>
-            <span class="gt-stat-label">Poziomów</span>
+            <span class="gt-stat-label" id="gt-stat-lbl-depth">${t('statLevels')}</span>
           </div>
           <div class="gt-stat-item">
             <span class="gt-stat-value" id="gt-stat-branches">0</span>
-            <span class="gt-stat-label">Gałęzi</span>
+            <span class="gt-stat-label" id="gt-stat-lbl-branches">${t('statBranches')}</span>
           </div>
         </div>
 
         <div class="gt-controls-row">
           <div class="gt-legend">
-            <div class="gt-legend-item"><span class="gt-legend-dot active"></span> Aktywna</div>
-            <div class="gt-legend-item"><span class="gt-legend-dot current"></span> Jesteś tutaj</div>
-            <div class="gt-legend-item"><span class="gt-legend-dot other"></span> Inne odnogi</div>
-            <div class="gt-legend-item"><span class="gt-legend-dot fork"></span> Rozwidlenie</div>
+            <div class="gt-legend-item"><span class="gt-legend-dot active"></span> <span id="gt-leg-active">${t('legendActive')}</span></div>
+            <div class="gt-legend-item"><span class="gt-legend-dot current"></span> <span id="gt-leg-current">${t('legendCurrent')}</span></div>
+            <div class="gt-legend-item"><span class="gt-legend-dot other"></span> <span id="gt-leg-other">${t('legendOther')}</span></div>
+            <div class="gt-legend-item"><span class="gt-legend-dot fork"></span> <span id="gt-leg-fork">${t('legendFork')}</span></div>
           </div>
           <div class="gt-canvas-toolbar">
-            <button class="gt-tool-btn" id="gt-zoom-out" title="Zmniejsz (-)">
+            <button class="gt-tool-btn" id="gt-zoom-out" title="${t('zoomOutTitle')}">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
-            <span class="gt-zoom-display" id="gt-zoom-display" title="Kliknij, aby przełączyć Auto / 100%">Auto</span>
-            <button class="gt-tool-btn" id="gt-zoom-in" title="Powiększ (+)">
+            <span class="gt-zoom-display" id="gt-zoom-display" title="${t('zoomDisplayTitle')}">Auto</span>
+            <button class="gt-tool-btn" id="gt-zoom-in" title="${t('zoomInTitle')}">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
-            <button class="gt-tool-btn gt-tool-fit-btn" id="gt-zoom-fit" title="Automatycznie dopasuj całe drzewo do okna">
+            <button class="gt-tool-btn gt-tool-fit-btn" id="gt-zoom-fit" title="${t('zoomFitTitle')}">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-              <span>Dopasuj</span>
+              <span>${t('zoomFitBtn')}</span>
             </button>
           </div>
         </div>
@@ -237,6 +458,7 @@
     document.body.appendChild(drawer);
     document.getElementById('gt-drawer-close').onclick = toggleDrawer;
     document.getElementById('gt-drawer-clear-btn').onclick = () => clearCurrentTree(false);
+    document.getElementById('gt-lang-btn').onclick = toggleLanguage;
     initDrawerResizer(drawer);
     setupZoomControls();
   }
@@ -320,7 +542,7 @@
   // --- Clear / Reset Tree for Current Chat ---
   async function clearCurrentTree(skipConfirm = false) {
     if (!skipConfirm) {
-      if (!confirm('Czy na pewno chcesz wyczyścić wszystkie gałęzie w tej rozmowie i przywrócić pierwotny widok czatu?')) {
+      if (!confirm(t('clearConfirm'))) {
         return;
       }
     }
@@ -354,7 +576,7 @@
 
       const toast = document.createElement('div');
       toast.className = 'gt-toast-notice';
-      toast.textContent = '✓ Pomyślnie wyczyszczono gałęzie czatu!';
+      toast.textContent = t('clearToast');
       document.body.appendChild(toast);
       setTimeout(() => toast.remove(), 2600);
     } catch (err) {
@@ -423,10 +645,10 @@
         <div class="gt-branch-banner-info">
           <span class="gt-banner-icon">${SVG_BRANCH}</span>
           <span class="gt-banner-text">
-            <strong>Nowa gałąź:</strong> Rozgałęziasz z pytania «${escapeHtml(snippet)}». Następny wysłany prompt utworzy alternatywną odnogę.
+            <strong>${t('bannerTitle')}</strong> ${t('bannerText', escapeHtml(snippet))}
           </span>
         </div>
-        <button class="gt-banner-cancel-btn" id="gt-cancel-branch">Anuluj</button>
+        <button class="gt-banner-cancel-btn" id="gt-cancel-branch">${t('bannerCancel')}</button>
       </div>
     `;
 
@@ -719,8 +941,8 @@
 
     btn = document.createElement('button');
     btn.className = 'gt-branch-action-btn';
-    btn.innerHTML = `${SVG_BRANCH} <span>Rozgałęź</span>`;
-    btn.title = 'Stwórz nową gałąź (alternatywne pytanie na tym poziomie konwersacji)';
+    btn.innerHTML = `${SVG_BRANCH} <span>${t('branchBtn')}</span>`;
+    btn.title = t('branchBtnTitle');
     updateBranchButtonHandler(btn, userQueryEl, text);
 
     targetContainer.appendChild(btn);
@@ -784,13 +1006,13 @@
     container.dataset.pillKey = pillKey;
     container.innerHTML = `
       <div class="gt-version-pill">
-        <button class="gt-version-arrow-btn" id="gt-prev-${node.id}" ${currentIndex <= 0 ? 'disabled' : ''} title="Poprzednia wersja">
+        <button class="gt-version-arrow-btn" id="gt-prev-${node.id}" ${currentIndex <= 0 ? 'disabled' : ''} title="${t('pillPrevTitle')}">
           ${SVG_CHEVRON_LEFT}
         </button>
-        <button class="gt-version-label-btn" id="gt-label-${node.id}" title="Kliknij, aby rozwinąć wersje">
-          Wersja ${currentIndex + 1} z ${siblings.length}
+        <button class="gt-version-label-btn" id="gt-label-${node.id}" title="${t('pillDropdownTitle')}">
+          ${t('pillVersion', currentIndex + 1, siblings.length)}
         </button>
-        <button class="gt-version-arrow-btn" id="gt-next-${node.id}" ${currentIndex >= siblings.length - 1 ? 'disabled' : ''} title="Następna wersja">
+        <button class="gt-version-arrow-btn" id="gt-next-${node.id}" ${currentIndex >= siblings.length - 1 ? 'disabled' : ''} title="${t('pillNextTitle')}">
           ${SVG_CHEVRON_RIGHT}
         </button>
       </div>
@@ -806,7 +1028,7 @@
                 <span class="gt-item-text">${escapeHtml(sNode.content)}</span>
               </div>
               ${siblings.length > 1 ? `
-                <button class="gt-version-delete-btn" data-delete-id="${sId}" title="Usuń tę wersję gałęzi">
+                <button class="gt-version-delete-btn" data-delete-id="${sId}" title="${t('pillDeleteTitle')}">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
               ` : ''}
@@ -856,7 +1078,7 @@
     const parentNode = currentTree.nodes[parentId];
     if (!parentNode || !parentNode.childrenIds) return;
 
-    if (!confirm('Czy na pewno chcesz usunąć tę wersję gałęzi?')) return;
+    if (!confirm(t('pillDeleteConfirm'))) return;
 
     parentNode.childrenIds = parentNode.childrenIds.filter(id => id !== childIdToDelete);
 
@@ -1120,8 +1342,8 @@
       container.innerHTML = `
         <div class="gt-graph-empty">
           <div style="font-size: 28px; margin-bottom: 10px;">🌱</div>
-          <div style="font-weight: 600; margin-bottom: 4px; color: var(--gt-text, #e2e8f0);">Brak gałęzi do wyświetlenia</div>
-          <div>Napisz prompt w Gemini lub użyj <b>🌿 Rozgałęź</b>, aby utworzyć alternatywną ścieżkę.</div>
+          <div style="font-weight: 600; margin-bottom: 4px; color: var(--gt-text, #e2e8f0);">${t('emptyTitle')}</div>
+          <div>${t('emptyDesc')}</div>
         </div>
       `;
       return;
@@ -1171,8 +1393,8 @@
       const originChildren = rootChildrenIds.map(cId => buildTreeNode(cId, 2)).filter(Boolean);
       treeRoots.push({
         id: 'gt-root-origin',
-        rawNode: { id: 'gt-root-origin', role: 'system', content: 'Rozpoczęcie czatu' },
-        content: 'Rozpoczęcie czatu',
+        rawNode: { id: 'gt-root-origin', role: 'system', content: t('chatOrigin') },
+        content: t('chatOrigin'),
         depth: 1,
         isActive: true,
         isCurrent: false,
@@ -1278,7 +1500,7 @@
     const displayEl = document.getElementById('gt-zoom-display');
     if (displayEl) {
       const pct = Math.round(activeScale * 100);
-      displayEl.textContent = currentGraphScale === 'auto' ? `Auto (${pct}%)` : `${pct}%`;
+      displayEl.textContent = currentGraphScale === 'auto' ? t('zoomAutoBadge', pct) : `${pct}%`;
     }
 
     // 7. Build Stage DOM with Scale Wrapper
@@ -1363,7 +1585,7 @@
 
       const dotBtn = document.createElement('button');
       dotBtn.className = dotClass;
-      dotBtn.setAttribute('title', node.isOrigin ? 'Początek czatu' : 'Kliknij, aby przeskoczyć do tej gałęzi');
+      dotBtn.setAttribute('title', node.isOrigin ? t('chatOrigin') : t('dotJumpTitle'));
 
       // Inner number or origin icon
       if (node.isOrigin) {
@@ -1383,7 +1605,7 @@
       if (node.isFork) {
         const forkIndicator = document.createElement('span');
         forkIndicator.className = 'gt-fork-badge';
-        forkIndicator.title = `Rozgałęzienie: ${node.children.length} gałęzie`;
+        forkIndicator.title = t('tooltipForkCount', node.children.length);
         dotBtn.appendChild(forkIndicator);
       }
 
@@ -1394,31 +1616,31 @@
       else if (stageWidth - node.x < 110) tooltipClass += ' align-right';
       tooltip.className = tooltipClass;
 
-      let badgeText = 'Inna gałąź';
+      let badgeText = t('badgeOther');
       let badgeClass = 'alt';
       if (node.isCurrent) {
-        badgeText = 'Jesteś tutaj';
+        badgeText = t('badgeCurrent');
         badgeClass = 'current';
       } else if (node.isActive) {
-        badgeText = 'Aktywna ścieżka';
+        badgeText = t('badgeActive');
         badgeClass = 'active';
       }
 
       const snippet = (node.content || '').trim().slice(0, 130);
       const hint = node.isCurrent 
-        ? '✓ Wyświetlana w oknie czatu' 
-        : (node.isOrigin ? 'Początek rozmowy' : '👉 Kliknij punkt, aby przeskoczyć');
+        ? t('tooltipHintCurrent') 
+        : (node.isOrigin ? t('tooltipHintOrigin') : t('tooltipHintJump'));
 
       tooltip.innerHTML = `
         <div class="gt-tooltip-header">
-          <span class="gt-tooltip-title">${node.isOrigin ? 'Początek czatu' : `Krok #${node.depth}`}</span>
+          <span class="gt-tooltip-title">${node.isOrigin ? t('chatOrigin') : t('chatTurn', node.depth)}</span>
           <span class="gt-tooltip-badge ${badgeClass}">${badgeText}</span>
         </div>
-        <div class="gt-tooltip-snippet">${escapeHtml(snippet) || '<em>(Brak treści promptu)</em>'}</div>
+        <div class="gt-tooltip-snippet">${escapeHtml(snippet) || `<em>${t('tooltipNoContent')}</em>`}</div>
         ${!node.isOrigin ? `
           <div class="gt-tooltip-actions">
             <button class="gt-tooltip-branch-btn" type="button">
-              ${SVG_BRANCH} <span>Rozgałęź z tego kroku</span>
+              ${SVG_BRANCH} <span>${t('tooltipBranchAction')}</span>
             </button>
           </div>
         ` : ''}
@@ -1513,19 +1735,26 @@
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.gt_extension_enabled !== undefined) {
-      isExtensionEnabled = changes.gt_extension_enabled.newValue;
-      if (!isExtensionEnabled) {
-        destroyExtensionUI();
-      } else {
-        initExtensionUI();
-        triggerDebouncedScan();
+    if (area === 'local') {
+      if (changes.gt_language) {
+        currentLanguage = changes.gt_language.newValue || 'en';
+        updateAllLocalizedUI();
+      }
+      if (changes.gt_extension_enabled !== undefined) {
+        isExtensionEnabled = changes.gt_extension_enabled.newValue;
+        if (!isExtensionEnabled) {
+          destroyExtensionUI();
+        } else {
+          initExtensionUI();
+          triggerDebouncedScan();
+        }
       }
     }
   });
 
   // --- Initialization ---
   async function init() {
+    await initLanguage();
     await checkMasterEnabled();
     if (!isExtensionEnabled) return;
 

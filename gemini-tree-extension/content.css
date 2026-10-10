@@ -311,6 +311,42 @@ body:not(.dark-theme):not(.theme-dark) .gt-drawer-title-wrap h3 {
   gap: 8px;
 }
 
+.gt-lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-family: var(--gt-font);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.gt-lang-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+.gt-theme-light .gt-lang-btn,
+body:not(.dark-theme):not(.theme-dark) .gt-lang-btn {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.gt-theme-light .gt-lang-btn:hover,
+body:not(.dark-theme):not(.theme-dark) .gt-lang-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
 .gt-drawer-action-btn {
   display: inline-flex;
   align-items: center;
