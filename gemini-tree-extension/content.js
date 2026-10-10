@@ -34,6 +34,7 @@
       currentNodeId: 'root',
       pendingBranchOriginId: null,
       pendingBranchNodeId: null,
+      lastActiveSendParentId: null,
       nodes: {
         'root': { id: 'root', parentId: null, role: 'system', content: 'Gemini Session', childrenIds: [], activeChildId: null }
       }
@@ -390,12 +391,21 @@
           existingNode = Object.values(currentTree.nodes).find(n => n.role === 'user' && n.content === text);
         }
 
-        // Check 4: If brand new message not recognized, add as standard linear child
+        // Check 4: If brand new message not recognized, add under current active node
         if (!existingNode) {
+          // Parent is the node the user was currently switched to when sending!
+          let targetParentId = currentTree.lastActiveSendParentId;
+          if (!targetParentId || !currentTree.nodes[targetParentId]) {
+            targetParentId = currentTree.currentNodeId;
+          }
+          if (!targetParentId || !currentTree.nodes[targetParentId] || targetParentId === 'root') {
+            targetParentId = prevParentId;
+          }
+
           const nodeId = 'user-' + hashStr(text) + '-' + index;
           existingNode = {
             id: nodeId,
-            parentId: prevParentId,
+            parentId: targetParentId,
             role: 'user',
             content: text,
             childrenIds: [],
@@ -403,18 +413,25 @@
             timestamp: Date.now()
           };
           currentTree.nodes[nodeId] = existingNode;
-          if (currentTree.nodes[prevParentId]) {
-            if (!currentTree.nodes[prevParentId].childrenIds.includes(nodeId)) {
-              currentTree.nodes[prevParentId].childrenIds.push(nodeId);
+          if (currentTree.nodes[targetParentId]) {
+            if (!currentTree.nodes[targetParentId].childrenIds.includes(nodeId)) {
+              currentTree.nodes[targetParentId].childrenIds.push(nodeId);
             }
-            currentTree.nodes[prevParentId].activeChildId = nodeId;
+            currentTree.nodes[targetParentId].activeChildId = nodeId;
           }
           currentTree.currentNodeId = nodeId;
+          currentTree.lastActiveSendParentId = null;
           changed = true;
         }
 
         el.setAttribute('data-gt-node-id', existingNode.id);
-        prevParentId = existingNode.id;
+
+        // Only update prevParentId if this turn is NOT hidden (so hidden branches do not corrupt linear parent)
+        const targetMsgEl = getSafeMessageElement(el);
+        const isTurnHidden = targetMsgEl && (targetMsgEl.classList.contains('gt-hidden-turn') || targetMsgEl.style.display === 'none');
+        if (!isTurnHidden) {
+          prevParentId = existingNode.id;
+        }
 
         // Inject Branch Button once per element
         if (!el.dataset.gtInjected) {
@@ -755,16 +772,32 @@
       if (e.key === 'Enter' && !e.shiftKey) {
         if (branchingFromNode || currentTree.pendingBranchOriginId) {
           handleUserSentMessage();
+        } else {
+          // Record current active node as parent for this new message
+          currentTree.lastActiveSendParentId = currentTree.currentNodeId && currentTree.nodes[currentTree.currentNodeId]
+            ? currentTree.currentNodeId
+            : 'root';
         }
       }
     }, true);
 
     // Intercept Send button click in capturing phase
     document.addEventListener('click', (e) => {
-      const sendBtn = e.target.closest('button[aria-label*="Wyślij" i], button[aria-label*="Send" i], .send-button');
+      const sendBtn = e.target.closest('button[aria-label*="Wyślij" i], button[aria-label*="Send" i], button[aria-label*="Aktualizuj" i], button[aria-label*="Update" i], .send-button');
       if (sendBtn) {
         if (branchingFromNode || currentTree.pendingBranchOriginId) {
           handleUserSentMessage();
+        } else {
+          // Check if user clicked "Aktualizuj" on an edited turn
+          const editedTurn = sendBtn.closest('user-query, .user-query-container, .message-container, .conversation-turn');
+          const editedId = editedTurn?.getAttribute('data-gt-node-id');
+          if (editedId && currentTree.nodes[editedId]) {
+            currentTree.lastActiveSendParentId = currentTree.nodes[editedId].parentId || 'root';
+          } else {
+            currentTree.lastActiveSendParentId = currentTree.currentNodeId && currentTree.nodes[currentTree.currentNodeId]
+              ? currentTree.currentNodeId
+              : 'root';
+          }
         }
       }
 
@@ -1145,17 +1178,18 @@
   }
 
   function jumpToNode(nodeId) {
+    if (nodeId === 'root' || nodeId === 'gt-root-origin') return;
     let curr = currentTree.nodes[nodeId];
+    if (!curr) return;
+
+    // Point all ancestors' activeChildId towards this selected node
     while (curr && curr.parentId && currentTree.nodes[curr.parentId]) {
       currentTree.nodes[curr.parentId].activeChildId = curr.id;
       curr = currentTree.nodes[curr.parentId];
     }
 
-    let deepest = nodeId;
-    while (currentTree.nodes[deepest] && currentTree.nodes[deepest].activeChildId) {
-      deepest = currentTree.nodes[deepest].activeChildId;
-    }
-    currentTree.currentNodeId = deepest;
+    // Set active node directly to the chosen node (so typing continues from here!)
+    currentTree.currentNodeId = nodeId;
 
     saveTree();
     applyBranchVisibility();

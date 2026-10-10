@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gemini Tree — Nieliniowe Rozgałęzienia Wątków",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Dodaje nieliniową strukturę wątków, rozgałęzianie pytań i wizualizację drzewa konwersacji do oficjalnego Google Gemini (gemini.google.com).",
   "icons": {
     "16": "icons/icon-16.png",
