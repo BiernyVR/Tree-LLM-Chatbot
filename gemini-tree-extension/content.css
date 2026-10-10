@@ -1,31 +1,417 @@
 /* ==========================================================================
-   Gemini Tree Chrome Extension — Native Styles for gemini.google.com
+   Gemini Tree Chrome Extension — Styles for gemini.google.com
+   High-contrast Light/Dark mode support, no overlaps, branch isolation.
    ========================================================================== */
 
 :root {
   --gt-primary: #4E80EE;
   --gt-purple: #9B72CF;
   --gt-gradient: linear-gradient(135deg, #4E80EE 0%, #9B72CF 100%);
-  --gt-gradient-subtle: linear-gradient(135deg, rgba(78, 128, 238, 0.15) 0%, rgba(155, 114, 207, 0.15) 100%);
-  --gt-bg-dark: #131314;
-  --gt-surface-dark: #1e1f20;
-  --gt-surface-elevated: #282a2c;
-  --gt-border-dark: rgba(255, 255, 255, 0.12);
-  --gt-text-primary: #e3e3e3;
-  --gt-text-secondary: #c4c7c5;
-  --gt-text-muted: #8e918f;
-  --gt-active-green: #34d399;
-  --gt-fork-amber: #f59e0b;
   --gt-font: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --gt-active-green: #10b981;
+  --gt-fork-amber: #f59e0b;
 }
 
-/* --- 1. Przycisk "Rozgałęź" w akcjach prompta --- */
+/* ==========================================================================
+   1. Baner Aktywnego Rozgałęziania (Branch Banner) — WYSOKI KONTRAST
+   ========================================================================== */
+#gt-branch-banner-root {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gt-branch-banner {
+  border-radius: 12px;
+  padding: 10px 16px;
+  margin: 10px auto;
+  max-width: 820px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--gt-font);
+  animation: gtSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes gtSlideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gt-branch-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  min-width: 0;
+  flex: 1;
+}
+
+.gt-banner-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.gt-banner-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.gt-banner-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.gt-banner-cancel-btn {
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-family: var(--gt-font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+/* MOTYW JASNY (LIGHT MODE) - KRYSTALICZNY KONTRAST */
+.gt-theme-light .gt-branch-banner,
+body:not(.dark-theme):not(.theme-dark) .gt-branch-banner {
+  background: #f0f4ff !important;
+  border: 1.5px solid #6366f1 !important;
+  box-shadow: 0 4px 16px rgba(78, 128, 238, 0.18) !important;
+}
+
+.gt-theme-light .gt-branch-banner-info,
+body:not(.dark-theme):not(.theme-dark) .gt-branch-banner-info {
+  color: #0f172a !important; /* Ciemny, wyrazisty tekst */
+}
+
+.gt-theme-light .gt-banner-text strong,
+body:not(.dark-theme):not(.theme-dark) .gt-banner-text strong {
+  color: #3730a3 !important; /* Wyrazisty granat */
+}
+
+.gt-theme-light .gt-banner-icon,
+body:not(.dark-theme):not(.theme-dark) .gt-banner-icon {
+  color: #4f46e5 !important;
+}
+
+.gt-theme-light .gt-banner-cancel-btn,
+body:not(.dark-theme):not(.theme-dark) .gt-banner-cancel-btn {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+}
+
+.gt-theme-light .gt-banner-cancel-btn:hover,
+body:not(.dark-theme):not(.theme-dark) .gt-banner-cancel-btn:hover {
+  background: #fecaca !important;
+  color: #991b1b !important;
+}
+
+/* MOTYW CIEMNY (DARK MODE) */
+.gt-theme-dark .gt-branch-banner,
+body.dark-theme .gt-branch-banner,
+body.theme-dark .gt-branch-banner {
+  background: #1c1d29 !important;
+  border: 1.5px solid #818cf8 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+.gt-theme-dark .gt-branch-banner-info,
+body.dark-theme .gt-branch-banner-info,
+body.theme-dark .gt-branch-banner-info {
+  color: #f8fafc !important; /* Biały, wyraźny tekst */
+}
+
+.gt-theme-dark .gt-banner-text strong,
+body.dark-theme .gt-banner-text strong,
+body.theme-dark .gt-banner-text strong {
+  color: #c7d2fe !important;
+}
+
+.gt-theme-dark .gt-banner-icon,
+body.dark-theme .gt-banner-icon,
+body.theme-dark .gt-banner-icon {
+  color: #a78bfa !important;
+}
+
+.gt-theme-dark .gt-banner-cancel-btn,
+body.dark-theme .gt-banner-cancel-btn,
+body.theme-dark .gt-banner-cancel-btn {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+.gt-theme-dark .gt-banner-cancel-btn:hover,
+body.dark-theme .gt-banner-cancel-btn:hover,
+body.theme-dark .gt-banner-cancel-btn:hover {
+  background: rgba(239, 68, 68, 0.35) !important;
+  color: #ffffff !important;
+}
+
+/* ==========================================================================
+   2. Przycisk w Topbarze Gemini (Drzewo Gałęzi) & Brak Nakładania!
+   ========================================================================== */
+.gt-topbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #1e1f20;
+  color: #e3e3e3;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-family: var(--gt-font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 99990;
+  user-select: none;
+}
+
+.gt-theme-light .gt-topbar-button,
+body:not(.dark-theme):not(.theme-dark) .gt-topbar-button {
+  background: #ffffff;
+  color: #1e293b;
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.gt-topbar-button:hover,
+.gt-topbar-button.active {
+  background: rgba(78, 128, 238, 0.15);
+  border-color: rgba(78, 128, 238, 0.6);
+  color: #4E80EE;
+}
+
+.gt-topbar-badge {
+  background: var(--gt-gradient);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+/* Floating button — gdy drawer jest OTWARTY, CHOWAMY PRZYCISK, aby nie nakładał się na nagłówek! */
+.gt-floating-toggle-btn {
+  position: fixed;
+  top: 14px;
+  right: 80px;
+  z-index: 99990;
+}
+
+/* KRYTYCZNA POPRAWKA NAKŁADANIA SIĘ ZE SCREENSHOTA 2: */
+body.gt-drawer-open .gt-floating-toggle-btn,
+body.gt-drawer-open .gt-topbar-button {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(30px);
+  transition: all 0.2s ease;
+}
+
+/* ==========================================================================
+   3. Boczny Panel Gemini Tree (In-Page Drawer)
+   ========================================================================== */
+.gt-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+  background: #18191b;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  z-index: 999999; /* Zawsze powyżej reszty */
+  display: flex;
+  flex-direction: column;
+  font-family: var(--gt-font);
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gt-theme-light .gt-drawer,
+body:not(.dark-theme):not(.theme-dark) .gt-drawer {
+  background: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
+}
+
+.gt-drawer.open {
+  transform: translateX(0);
+}
+
+.gt-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gt-theme-light .gt-drawer-header,
+body:not(.dark-theme):not(.theme-dark) .gt-drawer-header {
+  border-bottom-color: #e2e8f0;
+}
+
+.gt-drawer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gt-drawer-title-wrap h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.gt-theme-light .gt-drawer-title-wrap h3,
+body:not(.dark-theme):not(.theme-dark) .gt-drawer-title-wrap h3 {
+  color: #0f172a;
+}
+
+.gt-drawer-icon-accent {
+  color: var(--gt-primary);
+  display: flex;
+}
+
+.gt-drawer-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.gt-drawer-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.gt-theme-light .gt-drawer-close-btn:hover,
+body:not(.dark-theme):not(.theme-dark) .gt-drawer-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.gt-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Statystyki w drawerze */
+.gt-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.gt-theme-light .gt-stats-bar,
+body:not(.dark-theme):not(.theme-dark) .gt-stats-bar {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.gt-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.gt-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #8ab4f8;
+}
+
+.gt-theme-light .gt-stat-value,
+body:not(.dark-theme):not(.theme-dark) .gt-stat-value {
+  color: #4f46e5;
+}
+
+.gt-stat-label {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gt-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
+  color: #c4c7c5;
+  padding: 2px 4px;
+}
+
+.gt-theme-light .gt-legend,
+body:not(.dark-theme):not(.theme-dark) .gt-legend {
+  color: #64748b;
+}
+
+.gt-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gt-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.gt-legend-dot.active {
+  background: var(--gt-active-green);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.gt-legend-dot.other {
+  background: #a78bfa;
+}
+
+.gt-legend-dot.fork {
+  background: var(--gt-fork-amber);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+
+/* ==========================================================================
+   4. Przycisk "Rozgałęź" w akcjach prompta
+   ========================================================================== */
 .gt-branch-action-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   background: rgba(78, 128, 238, 0.12);
-  color: #8ab4f8;
+  color: #4f46e5;
   border: 1px solid rgba(78, 128, 238, 0.3);
   border-radius: 18px;
   padding: 4px 10px;
@@ -39,10 +425,16 @@
   user-select: none;
 }
 
+.gt-theme-dark .gt-branch-action-btn,
+body.dark-theme .gt-branch-action-btn,
+body.theme-dark .gt-branch-action-btn {
+  background: rgba(78, 128, 238, 0.15);
+  color: #8ab4f8;
+  border-color: rgba(78, 128, 238, 0.4);
+}
+
 .gt-branch-action-btn:hover {
   background: rgba(78, 128, 238, 0.25);
-  color: #d2e3fc;
-  border-color: rgba(78, 128, 238, 0.6);
   transform: translateY(-1px);
 }
 
@@ -53,11 +445,13 @@
   flex-shrink: 0;
 }
 
-/* --- 2. Selektor Wersji Prompta (Pill Selector) --- */
+/* ==========================================================================
+   5. Selektor Wersji Prompta (Pill Selector) & Ukrywanie Innych Gałęzi
+   ========================================================================== */
 .gt-version-pill-container {
   display: inline-flex;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   font-family: var(--gt-font);
   position: relative;
   user-select: none;
@@ -66,17 +460,25 @@
 .gt-version-pill {
   display: inline-flex;
   align-items: center;
-  background: rgba(30, 31, 32, 0.95);
-  border: 1px solid rgba(155, 114, 207, 0.35);
+  background: #ffffff;
+  border: 1.5px solid #818cf8;
   border-radius: 16px;
   padding: 2px 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.18);
+}
+
+.gt-theme-dark .gt-version-pill,
+body.dark-theme .gt-version-pill,
+body.theme-dark .gt-version-pill {
+  background: #1e1f20;
+  border-color: rgba(155, 114, 207, 0.45);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 .gt-version-arrow-btn {
   background: transparent;
   border: none;
-  color: var(--gt-text-secondary);
+  color: #64748b;
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -88,9 +490,15 @@
   transition: all 0.15s;
 }
 
+.gt-theme-dark .gt-version-arrow-btn,
+body.dark-theme .gt-version-arrow-btn,
+body.theme-dark .gt-version-arrow-btn {
+  color: #94a3b8;
+}
+
 .gt-version-arrow-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(99, 102, 241, 0.15);
+  color: #4f46e5;
 }
 
 .gt-version-arrow-btn:disabled {
@@ -101,40 +509,53 @@
 .gt-version-label-btn {
   background: transparent;
   border: none;
-  color: #c7d2fe;
+  color: #4338ca;
   font-family: var(--gt-font);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 700;
   padding: 2px 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
   border-radius: 10px;
-  transition: background 0.15s;
+}
+
+.gt-theme-dark .gt-version-label-btn,
+body.dark-theme .gt-version-label-btn,
+body.theme-dark .gt-version-label-btn {
+  color: #c7d2fe;
 }
 
 .gt-version-label-btn:hover {
-  background: rgba(155, 114, 207, 0.2);
+  background: rgba(99, 102, 241, 0.15);
 }
 
 .gt-version-dropdown {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  background: var(--gt-surface-elevated);
-  border: 1px solid var(--gt-border-dark);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
   border-radius: 12px;
   padding: 6px;
-  min-width: 240px;
+  min-width: 250px;
   max-width: 320px;
   max-height: 260px;
   overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   z-index: 99999;
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.gt-theme-dark .gt-version-dropdown,
+body.dark-theme .gt-version-dropdown,
+body.theme-dark .gt-version-dropdown {
+  background: #282a2c;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
 .gt-version-dropdown-item {
@@ -152,27 +573,33 @@
 }
 
 .gt-version-dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(99, 102, 241, 0.08);
 }
 
 .gt-version-dropdown-item.active {
-  background: var(--gt-gradient-subtle);
-  border: 1px solid rgba(78, 128, 238, 0.3);
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
 }
 
 .gt-item-badge {
   font-size: 10px;
   font-weight: 700;
-  background: rgba(78, 128, 238, 0.25);
-  color: #8ab4f8;
+  background: rgba(99, 102, 241, 0.2);
+  color: #4f46e5;
   padding: 2px 6px;
   border-radius: 10px;
   flex-shrink: 0;
 }
 
+.gt-theme-dark .gt-item-badge,
+body.dark-theme .gt-item-badge,
+body.theme-dark .gt-item-badge {
+  color: #a5b4fc;
+}
+
 .gt-item-text {
   font-size: 11px;
-  color: var(--gt-text-primary);
+  color: #0f172a;
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -181,251 +608,22 @@
   -webkit-box-orient: vertical;
 }
 
-/* --- 3. Baner aktywnego rozgałęziania (Branch Banner) --- */
-.gt-branch-banner {
-  background: linear-gradient(90deg, rgba(78, 128, 238, 0.12), rgba(155, 114, 207, 0.12));
-  border: 1px solid rgba(78, 128, 238, 0.35);
-  border-radius: 14px;
-  padding: 8px 14px;
-  margin: 10px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-family: var(--gt-font);
-  animation: gtSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+.gt-theme-dark .gt-item-text,
+body.dark-theme .gt-item-text,
+body.theme-dark .gt-item-text {
+  color: #e3e3e3;
 }
 
-@keyframes gtSlideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ==========================================================================
+   6. IZOLACJA GAŁĘZI — Ukrywanie wiadomości z innych gałęzi
+   ========================================================================== */
+.gt-hidden-turn {
+  display: none !important;
 }
 
-.gt-branch-banner-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--gt-text-primary);
-  min-width: 0;
-}
-
-.gt-banner-icon {
-  color: var(--gt-purple);
-  flex-shrink: 0;
-}
-
-.gt-banner-text {
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.gt-banner-cancel-btn {
-  background: rgba(255, 255, 255, 0.08);
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.3);
-  border-radius: 12px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.15s;
-}
-
-.gt-banner-cancel-btn:hover {
-  background: rgba(248, 113, 113, 0.18);
-  color: #fff;
-}
-
-/* --- 4. Przycisk w Topbarze Gemini (Drzewo Gałęzi) --- */
-.gt-topbar-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--gt-surface-elevated);
-  color: var(--gt-text-primary);
-  border: 1px solid var(--gt-border-dark);
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-family: var(--gt-font);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-  z-index: 1000;
-  user-select: none;
-}
-
-.gt-topbar-button:hover,
-.gt-topbar-button.active {
-  background: var(--gt-gradient-subtle);
-  border-color: rgba(78, 128, 238, 0.5);
-  color: #8ab4f8;
-  box-shadow: 0 2px 10px rgba(78, 128, 238, 0.2);
-}
-
-.gt-topbar-badge {
-  background: var(--gt-gradient);
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 10px;
-}
-
-/* Floating fallback button jeśli topbar nie jest bezpośrednio dostępny */
-.gt-floating-toggle-btn {
-  position: fixed;
-  top: 14px;
-  right: 80px;
-  z-index: 999999;
-}
-
-/* --- 5. Boczny Panel Gemini Tree (In-Page Drawer) --- */
-.gt-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 380px;
-  background: var(--gt-surface-dark);
-  border-left: 1px solid var(--gt-border-dark);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
-  z-index: 999998;
-  display: flex;
-  flex-direction: column;
-  font-family: var(--gt-font);
-  transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.gt-drawer.open {
-  transform: translateX(0);
-}
-
-.gt-drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--gt-border-dark);
-}
-
-.gt-drawer-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.gt-drawer-title-wrap h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: #ffffff;
-}
-
-.gt-drawer-icon-accent {
-  color: var(--gt-primary);
-}
-
-.gt-drawer-close-btn {
-  background: transparent;
-  border: none;
-  color: var(--gt-text-muted);
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-
-.gt-drawer-close-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-
-.gt-drawer-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-/* Legenda i statystyki */
-.gt-stats-bar {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  background: var(--gt-surface-elevated);
-  border-radius: 12px;
-  padding: 10px 12px;
-}
-
-.gt-stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.gt-stat-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #8ab4f8;
-}
-
-.gt-stat-label {
-  font-size: 10px;
-  color: var(--gt-text-muted);
-  margin-top: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.gt-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 11px;
-  color: var(--gt-text-secondary);
-  padding: 4px 6px;
-}
-
-.gt-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.gt-legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.gt-legend-dot.active {
-  background: var(--gt-active-green);
-  box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
-}
-
-.gt-legend-dot.other {
-  background: #a78bfa;
-}
-
-.gt-legend-dot.fork {
-  background: var(--gt-fork-amber);
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
-}
-
-/* --- 6. Interaktywny Graf Punktów (Dot Tree) --- */
+/* ==========================================================================
+   7. Interaktywny Graf Punktów (Dot Tree)
+   ========================================================================== */
 .gt-graph-container {
   display: flex;
   flex-direction: column;
@@ -445,13 +643,19 @@
 .gt-connector-line {
   width: 2px;
   height: 22px;
-  background: #3c4043;
+  background: #cbd5e1;
   margin: 0 auto;
 }
 
+.gt-theme-dark .gt-connector-line,
+body.dark-theme .gt-connector-line,
+body.theme-dark .gt-connector-line {
+  background: #3c4043;
+}
+
 .gt-connector-line.active {
-  background: var(--gt-active-green);
-  box-shadow: 0 0 4px rgba(52, 211, 153, 0.4);
+  background: var(--gt-active-green) !important;
+  box-shadow: 0 0 4px rgba(16, 185, 129, 0.5);
 }
 
 .gt-branches-row {
@@ -464,12 +668,11 @@
   padding: 4px 0;
 }
 
-/* Pozioma belka łącząca rozgałęzienia */
 .gt-fork-bar {
   position: absolute;
   top: 50%;
   height: 2px;
-  background: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.5);
   transform: translateY(-50%);
   z-index: 1;
 }
@@ -486,27 +689,34 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #3c4043;
-  border: 2px solid #5f6368;
+  background: #cbd5e1;
+  border: 2px solid #94a3b8;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
+.gt-theme-dark .gt-node-dot,
+body.dark-theme .gt-node-dot,
+body.theme-dark .gt-node-dot {
+  background: #3c4043;
+  border-color: #5f6368;
+}
+
 .gt-node-dot:hover {
   transform: scale(1.35);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
 }
 
 .gt-node-dot.active {
-  background: var(--gt-active-green);
-  border-color: #a7f3d0;
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.8);
+  background: var(--gt-active-green) !important;
+  border-color: #a7f3d0 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8) !important;
   transform: scale(1.2);
 }
 
 .gt-node-dot.other {
-  background: #6d28d9;
-  border-color: #a78bfa;
+  background: #8b5cf6;
+  border-color: #c4b5fd;
 }
 
 .gt-node-dot.fork {
@@ -521,8 +731,8 @@
   bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background: #282a2c;
-  border: 1px solid var(--gt-border-dark);
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 11px;
@@ -550,7 +760,7 @@
 }
 
 .gt-tooltip-snippet {
-  color: var(--gt-text-secondary);
+  color: #cbd5e1;
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -558,10 +768,10 @@
   overflow: hidden;
 }
 
-/* Wyróżnienie przeskoczonej wiadomości w czacie */
+/* Flash animacja przeskoku */
 @keyframes gtFlash {
   0% { outline: 2px solid transparent; }
-  50% { outline: 3px solid var(--gt-primary); background: rgba(78, 128, 238, 0.15); }
+  50% { outline: 3px solid #6366f1; background: rgba(99, 102, 241, 0.15); }
   100% { outline: 2px solid transparent; }
 }
 

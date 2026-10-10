@@ -13,7 +13,7 @@
         <img src="icons/icon-48.png" alt="Gemini Tree" class="popup-logo">
         <div class="title-group">
           <h1>Gemini Tree</h1>
-          <span class="version-tag">v1.0</span>
+          <span class="version-tag">v1.1</span>
         </div>
       </div>
       <div class="status-badge" id="status-badge">
@@ -22,18 +22,26 @@
     </header>
 
     <div class="popup-body">
-      <p class="popup-desc">
-        Natywne rozgałęzianie wątków i wizualizacja drzewa konwersacji w Google Gemini.
-      </p>
+      <!-- Włącznik/Wyłącznik wtyczki -->
+      <div class="toggle-card">
+        <div class="toggle-info">
+          <span class="toggle-title">Aktywność wtyczki</span>
+          <span class="toggle-subtitle" id="toggle-subtitle">Włączona na gemini.google.com</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="extension-toggle" checked>
+          <span class="slider round"></span>
+        </label>
+      </div>
 
       <div class="quick-stats">
         <div class="stat-card">
           <span class="stat-num" id="stat-nodes-count">-</span>
-          <span class="stat-label">Węzłów w sesji</span>
+          <span class="stat-label">Węzłów w tym czacie</span>
         </div>
         <div class="stat-card">
           <span class="stat-num" id="stat-branches-count">-</span>
-          <span class="stat-label">Gałęzi</span>
+          <span class="stat-label">Gałęzi w tym czacie</span>
         </div>
       </div>
 
@@ -41,38 +49,45 @@
         <div class="feature-item">
           <span class="feature-icon">🌿</span>
           <div class="feature-text">
-            <strong>Przycisk „Rozgałęź”</strong>
-            <span>Pojawia się obok każdego pytania w Gemini.</span>
+            <strong>Rozgałęzianie na żądanie</strong>
+            <span>Przycisk „Rozgałęź” obok prompta użytkownika.</span>
+          </div>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">👁️</span>
+          <div class="feature-text">
+            <strong>Izolacja gałęzi</strong>
+            <span>Widzisz tylko pytania i odpowiedzi z wybranej gałęzi.</span>
           </div>
         </div>
         <div class="feature-item">
           <span class="feature-icon">🧭</span>
           <div class="feature-text">
-            <strong>Wersja 1 z X</strong>
-            <span>Wygodny selektor wersji pytań na tym samym poziomie.</span>
+            <strong>Selektor Wersja 1 z X</strong>
+            <span>Szybkie przełączanie alternatywnych ścieżek.</span>
           </div>
         </div>
         <div class="feature-item">
           <span class="feature-icon">📊</span>
           <div class="feature-text">
-            <strong>Panel Boczny</strong>
-            <span>Kliknij „Drzewo Gałęzi” w prawym górnym rogu Gemini.</span>
+            <strong>Wizualizacja Drzewa</strong>
+            <span>Prawy panel z grafem punktów (Drzewo Gałęzi).</span>
           </div>
         </div>
       </div>
 
       <div class="popup-actions">
         <button id="btn-open-gemini" class="btn-primary">
-          Otwórz gemini.google.com
+          Otwórz Google Gemini
         </button>
         <button id="btn-clear-current" class="btn-secondary">
-          Zresetuj drzewo tej rozmowy
+          Wyczyść drzewo tego czatu
         </button>
       </div>
     </div>
 
     <footer class="popup-footer">
-      <span>Zbudowane dla Google Gemini • Manifest V3</span>
+      <span id="chat-id-label">Sesja: wykrywanie...</span>
     </footer>
   </div>
 

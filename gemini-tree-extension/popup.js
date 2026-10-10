@@ -4,16 +4,42 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnOpenGemini = document.getElementById('btn-open-gemini');
   const btnClearCurrent = document.getElementById('btn-clear-current');
   const statusBadge = document.getElementById('status-badge');
+  const extensionToggle = document.getElementById('extension-toggle');
+  const toggleSubtitle = document.getElementById('toggle-subtitle');
+  const chatIdLabel = document.getElementById('chat-id-label');
+
+  // Load master toggle state
+  const { gt_extension_enabled = true } = await chrome.storage.local.get('gt_extension_enabled');
+  extensionToggle.checked = gt_extension_enabled;
+  updateToggleUI(gt_extension_enabled);
+
+  extensionToggle.addEventListener('change', async (e) => {
+    const isEnabled = e.target.checked;
+    await chrome.storage.local.set({ gt_extension_enabled: isEnabled });
+    updateToggleUI(isEnabled);
+  });
+
+  function updateToggleUI(isEnabled) {
+    if (isEnabled) {
+      toggleSubtitle.textContent = 'Włączona na gemini.google.com';
+      toggleSubtitle.style.color = '#8e918f';
+      statusBadge.innerHTML = '<span class="status-dot"></span> Aktywna';
+    } else {
+      toggleSubtitle.textContent = 'Wyłączona (wstrzykiwanie wstrzymane)';
+      toggleSubtitle.style.color = '#f87171';
+      statusBadge.innerHTML = '<span class="status-dot" style="background: #f87171; box-shadow: none;"></span> Wyłączona';
+    }
+  }
 
   // Check current active tab
   let currentChatKey = null;
   try {
     const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (activeTab && activeTab.url && activeTab.url.includes('gemini.google.com')) {
-      statusBadge.innerHTML = '<span class="status-dot"></span> Aktywna w Gemini';
       const match = activeTab.url.match(/\/app\/([a-zA-Z0-9_-]+)/);
-      const chatId = match ? match[1] : 'default';
+      const chatId = match ? match[1] : 'current_session';
       currentChatKey = `geminitree_data_${chatId}`;
+      chatIdLabel.textContent = `Sesja: ${chatId.length > 18 ? chatId.slice(0, 18) + '...' : chatId}`;
 
       const data = await chrome.storage.local.get(currentChatKey);
       const tree = data[currentChatKey];
@@ -27,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         statBranchesEl.textContent = '1';
       }
     } else {
-      statusBadge.innerHTML = '<span class="status-dot" style="background: #94a3b8; box-shadow: none;"></span> Oczekuje na Gemini';
+      chatIdLabel.textContent = 'Brak otwartej karty Gemini';
       statNodesEl.textContent = '-';
       statBranchesEl.textContent = '-';
     }
@@ -43,14 +69,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Button: Clear current tree
   btnClearCurrent.addEventListener('click', async () => {
     if (currentChatKey) {
-      if (confirm('Czy na pewno chcesz zresetować drzewo rozgałęzień dla tej rozmowy?')) {
+      if (confirm('Czy na pewno chcesz wyczyścić drzewo rozgałęzień dla tej rozmowy?')) {
         await chrome.storage.local.remove(currentChatKey);
         statNodesEl.textContent = '0';
         statBranchesEl.textContent = '1';
-        alert('Zresetowano drzewo bieżącej sesji.');
+        alert('Wyczyszczono drzewo tego czatu. Odśwież stronę Gemini, aby rozpocząć od nowa.');
       }
     } else {
-      alert('Przejdź najpierw na kartę gemini.google.com');
+      alert('Przejdź najpierw na kartę z otwartym czatem gemini.google.com');
     }
   });
 });
