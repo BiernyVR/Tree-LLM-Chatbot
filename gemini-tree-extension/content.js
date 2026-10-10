@@ -435,18 +435,13 @@
         el.setAttribute('data-gt-node-id', existingNode.id);
         claimedNodeIds.add(existingNode.id);
 
-        // Only update prevParentId if this turn is NOT hidden (so hidden branches do not corrupt linear parent)
-        const targetMsgEl = getSafeMessageElement(el);
-        const isTurnHidden = targetMsgEl && (targetMsgEl.classList.contains('gt-hidden-turn') || targetMsgEl.style.display === 'none');
-        if (!isTurnHidden) {
+        // Only update prevParentId if this turn is on the active path
+        if (isNodeOnActivePath(existingNode.id)) {
           prevParentId = existingNode.id;
         }
 
-        // Inject Branch Button once per element
-        if (!el.dataset.gtInjected) {
-          injectBranchAction(el, text);
-          el.dataset.gtInjected = 'true';
-        }
+        // Inject / Update Branch Button position on every scan
+        injectBranchAction(el, text);
 
         // Inject / Update Version Pill
         injectVersionPill(el, existingNode);
@@ -483,6 +478,16 @@
       el.hasAttribute?.('data-gt-node-id') ||
       el.querySelector?.('button[aria-label*="Edytuj" i], button[aria-label*="Edit" i]') !== null
     );
+  }
+
+  function isNodeOnActivePath(nodeId) {
+    if (!nodeId) return false;
+    let curr = currentTree.nodes[currentTree.currentNodeId];
+    while (curr) {
+      if (curr.id === nodeId) return true;
+      curr = curr.parentId ? currentTree.nodes[curr.parentId] : null;
+    }
+    return false;
   }
 
   // --- True Branch Visibility: Only the active branch path is shown! ---
@@ -557,8 +562,11 @@
   }
 
   function extractTextFromElement(el) {
-    const textEl = el.querySelector('.query-text') || el.querySelector('p') || el;
-    return textEl.innerText.trim();
+    if (!el) return '';
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('.gt-branch-action-btn, .gt-version-pill-container, .gt-custom-actions-bar, .gt-branch-banner, script, style').forEach(n => n.remove());
+    const textEl = clone.querySelector('.query-text') || clone.querySelector('.query-content') || clone.querySelector('p') || clone;
+    return (textEl.innerText || textEl.textContent || '').trim();
   }
 
   function hashStr(s) {
@@ -571,19 +579,57 @@
   }
 
   // --- Injecting "Rozgałęź" Button ---
-  function injectBranchAction(userQueryEl, text) {
-    if (userQueryEl.querySelector('.gt-branch-action-btn')) return;
-
-    const actionContainer = 
+  function findActionContainer(userQueryEl) {
+    // 1. Existing action buttons container from Gemini
+    const geminiActions = 
       userQueryEl.querySelector('.action-buttons') || 
       userQueryEl.querySelector('.actions') || 
       userQueryEl.querySelector('button[aria-label*="Edytuj" i]')?.parentElement ||
-      userQueryEl;
+      userQueryEl.querySelector('button[aria-label*="Edit" i]')?.parentElement ||
+      userQueryEl.querySelector('[data-test-id*="action"]');
+    if (geminiActions) return geminiActions;
 
-    const btn = document.createElement('button');
+    // 2. Inside user-query-container next to text
+    const queryContainer = 
+      userQueryEl.querySelector('.user-query-container') ||
+      userQueryEl.querySelector('.query-content')?.parentElement ||
+      userQueryEl.querySelector('.query-text')?.parentElement;
+    if (queryContainer) {
+      let customActions = queryContainer.querySelector('.gt-custom-actions-bar');
+      if (!customActions) {
+        customActions = document.createElement('div');
+        customActions.className = 'gt-custom-actions-bar';
+        queryContainer.appendChild(customActions);
+      }
+      return customActions;
+    }
+
+    return userQueryEl;
+  }
+
+  function injectBranchAction(userQueryEl, text) {
+    const targetContainer = findActionContainer(userQueryEl);
+    let btn = userQueryEl.querySelector('.gt-branch-action-btn');
+
+    if (btn) {
+      // If button was previously put in fallback container, but now a better container (like Gemini's .actions) is available, move it!
+      if (targetContainer && btn.parentElement !== targetContainer && !targetContainer.contains(btn)) {
+        targetContainer.appendChild(btn);
+      }
+      updateBranchButtonHandler(btn, userQueryEl, text);
+      return;
+    }
+
+    btn = document.createElement('button');
     btn.className = 'gt-branch-action-btn';
     btn.innerHTML = `${SVG_BRANCH} <span>Rozgałęź</span>`;
     btn.title = 'Stwórz nową gałąź (alternatywne pytanie na tym poziomie konwersacji)';
+    updateBranchButtonHandler(btn, userQueryEl, text);
+
+    targetContainer.appendChild(btn);
+  }
+
+  function updateBranchButtonHandler(btn, userQueryEl, text) {
     btn.onclick = (e) => {
       e.stopPropagation();
       const nodeId = userQueryEl.getAttribute('data-gt-node-id');
@@ -591,12 +637,11 @@
       if (node) {
         onBranchOffClick(node);
       } else {
-        const found = Object.values(currentTree.nodes).find(n => n.role === 'user' && n.content === text);
+        const cleanText = extractTextFromElement(userQueryEl) || text;
+        const found = Object.values(currentTree.nodes).find(n => n.role === 'user' && n.content === cleanText);
         if (found) onBranchOffClick(found);
       }
     };
-
-    actionContainer.appendChild(btn);
   }
 
   function onBranchOffClick(node) {
@@ -785,8 +830,17 @@
     // Intercept Enter key in capturing phase
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
+        const isChatInput = e.target.closest('rich-textarea, [contenteditable="true"], textarea, .chat-input-container');
+        if (!isChatInput) return;
+
+        // Check if user pressed Enter inside an edited query turn
+        const editedTurn = e.target.closest('user-query, .user-query-container, .message-container, .conversation-turn');
+        const editedId = editedTurn?.getAttribute('data-gt-node-id');
+
         if (branchingFromNode || currentTree.pendingBranchOriginId) {
           handleUserSentMessage();
+        } else if (editedId && currentTree.nodes[editedId]) {
+          currentTree.lastActiveSendParentId = currentTree.nodes[editedId].parentId || 'root';
         } else {
           // Record current active node as parent for this new message
           currentTree.lastActiveSendParentId = currentTree.currentNodeId && currentTree.nodes[currentTree.currentNodeId]
@@ -798,7 +852,7 @@
 
     // Intercept Send button click in capturing phase
     document.addEventListener('click', (e) => {
-      const sendBtn = e.target.closest('button[aria-label*="Wyślij" i], button[aria-label*="Send" i], button[aria-label*="Aktualizuj" i], button[aria-label*="Update" i], .send-button');
+      const sendBtn = e.target.closest('button[aria-label*="Wyślij" i], button[aria-label*="Send" i], button[aria-label*="Prześlij" i], button[aria-label*="Submit" i], button[aria-label*="Aktualizuj" i], button[aria-label*="Update" i], .send-button, [data-test-id*="send" i], [mattooltip*="Wyślij" i]');
       if (sendBtn) {
         if (branchingFromNode || currentTree.pendingBranchOriginId) {
           handleUserSentMessage();
@@ -1174,8 +1228,25 @@
           <span class="gt-tooltip-badge ${badgeClass}">${badgeText}</span>
         </div>
         <div class="gt-tooltip-snippet">${escapeHtml(snippet) || '<em>(Brak treści promptu)</em>'}</div>
+        ${!node.isOrigin ? `
+          <div class="gt-tooltip-actions">
+            <button class="gt-tooltip-branch-btn" type="button">
+              ${SVG_BRANCH} <span>Rozgałęź z tego kroku</span>
+            </button>
+          </div>
+        ` : ''}
         <div class="gt-tooltip-footer">${hint}</div>
       `;
+
+      // Tooltip branch action button
+      const branchBtn = tooltip.querySelector('.gt-tooltip-branch-btn');
+      if (branchBtn) {
+        branchBtn.onclick = (e) => {
+          e.stopPropagation();
+          jumpToNode(node.id);
+          onBranchOffClick(node.rawNode);
+        };
+      }
 
       nodeWrap.appendChild(dotBtn);
       nodeWrap.appendChild(tooltip);
@@ -1184,6 +1255,14 @@
         e.stopPropagation();
         if (node.isOrigin) return;
         jumpToNode(node.id);
+      };
+
+      dotBtn.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (node.isOrigin) return;
+        jumpToNode(node.id);
+        onBranchOffClick(node.rawNode);
       };
 
       stageEl.appendChild(nodeWrap);
