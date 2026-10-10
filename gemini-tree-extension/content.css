@@ -692,150 +692,301 @@ body.theme-dark .gt-item-text {
 }
 
 /* ==========================================================================
-   7. Interaktywny Graf Punktów (Dot Tree)
+   7. Interaktywny Graf Punktów (Dot Tree) - Prawdziwe Drzewo SVG
    ========================================================================== */
 .gt-graph-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 16px 0;
+  position: relative;
   width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 10px 0 30px 0;
+  box-sizing: border-box;
 }
 
-.gt-graph-level {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-
-.gt-connector-line {
-  width: 2px;
-  height: 22px;
-  background: #cbd5e1;
+.gt-tree-stage {
+  position: relative;
   margin: 0 auto;
+  min-width: 100%;
 }
 
-.gt-theme-dark .gt-connector-line,
-body.dark-theme .gt-connector-line,
-body.theme-dark .gt-connector-line {
-  background: #3c4043;
-}
-
-.gt-connector-line.active {
-  background: var(--gt-active-green) !important;
-  box-shadow: 0 0 4px rgba(16, 185, 129, 0.5);
-}
-
-.gt-branches-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 18px;
-  position: relative;
-  width: 100%;
-  padding: 4px 0;
-}
-
-.gt-fork-bar {
+/* Linie poziomów w tle (Depth grid) */
+.gt-depth-grid {
   position: absolute;
-  top: 50%;
-  height: 2px;
-  background: rgba(245, 158, 11, 0.5);
-  transform: translateY(-50%);
-  z-index: 1;
+  inset: 0;
+  pointer-events: none;
 }
 
-.gt-node-dot-wrap {
-  position: relative;
-  z-index: 2;
+.gt-depth-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
   display: flex;
-  flex-direction: column;
   align-items: center;
+  transform: translateY(-50%);
 }
 
-.gt-node-dot {
-  width: 16px;
-  height: 16px;
+.gt-theme-light .gt-depth-line,
+body:not(.dark-theme):not(.theme-dark) .gt-depth-line {
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.gt-depth-tag {
+  font-size: 10px;
+  color: #94a3b8;
+  background: #18191b;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+.gt-theme-light .gt-depth-tag,
+body:not(.dark-theme):not(.theme-dark) .gt-depth-tag {
+  background: #ffffff;
+  color: #64748b;
+}
+
+/* Warstwa SVG i ścieżki gałęzi */
+.gt-tree-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.gt-tree-path {
+  fill: none;
+  transition: all 0.25s ease;
+}
+
+.gt-tree-path.active-path {
+  stroke: var(--gt-active-green, #10b981);
+  stroke-width: 3px;
+  stroke-linecap: round;
+}
+
+.gt-tree-path.inactive-path {
+  stroke: #5f6368;
+  stroke-width: 2px;
+  stroke-dasharray: 4 4;
+}
+
+.gt-theme-light .gt-tree-path.inactive-path,
+body:not(.dark-theme):not(.theme-dark) .gt-tree-path.inactive-path {
+  stroke: #cbd5e1;
+}
+
+/* Punkty węzłów (Kropki) */
+.gt-tree-node-wrap {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  user-select: none;
+}
+
+.gt-node-dot-btn {
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #cbd5e1;
-  border: 2px solid #94a3b8;
+  border: 2px solid #5f6368;
+  background: #2a2b2d;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s, border-color 0.2s;
+  padding: 0;
+  outline: none;
 }
 
-.gt-theme-dark .gt-node-dot,
-body.dark-theme .gt-node-dot,
-body.theme-dark .gt-node-dot {
-  background: #3c4043;
-  border-color: #5f6368;
+.gt-theme-light .gt-node-dot-btn,
+body:not(.dark-theme):not(.theme-dark) .gt-node-dot-btn {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #64748b;
 }
 
-.gt-node-dot:hover {
-  transform: scale(1.35);
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+.gt-node-dot-btn:hover {
+  transform: scale(1.3);
+  z-index: 10;
 }
 
-.gt-node-dot.active {
-  background: var(--gt-active-green) !important;
-  border-color: #a7f3d0 !important;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8) !important;
-  transform: scale(1.2);
+.gt-dot-number {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.gt-node-dot.other {
-  background: #8b5cf6;
-  border-color: #c4b5fd;
+/* Aktywny punkt */
+.gt-tree-node-wrap.active .gt-node-dot-btn {
+  background: var(--gt-active-green, #10b981) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.85) !important;
 }
 
-.gt-node-dot.fork {
-  background: var(--gt-fork-amber);
-  border-color: #fde68a;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+/* Inny punkt (alternatywa) */
+.gt-tree-node-wrap.other .gt-node-dot-btn {
+  background: #221f3b !important;
+  border-color: #8b5cf6 !important;
+  color: #c4b5fd !important;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4) !important;
+}
+
+.gt-theme-light .gt-tree-node-wrap.other .gt-node-dot-btn,
+body:not(.dark-theme):not(.theme-dark) .gt-tree-node-wrap.other .gt-node-dot-btn {
+  background: #f5f3ff !important;
+  border-color: #8b5cf6 !important;
+  color: #7c3aed !important;
+}
+
+/* Punkt rozwidlenia */
+.gt-tree-node-wrap.fork .gt-node-dot-btn {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5) !important;
+}
+
+/* Pulsujący pierścień dla aktualnego węzła */
+.gt-pulse-ring {
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 2px solid var(--gt-active-green, #10b981);
+  animation: gtPulseAnimation 2s infinite cubic-bezier(0.24, 0, 0.38, 1);
+  pointer-events: none;
+}
+
+@keyframes gtPulseAnimation {
+  0% { transform: scale(0.7); opacity: 1; }
+  100% { transform: scale(1.7); opacity: 0; }
 }
 
 /* Tooltip węzła */
 .gt-node-tooltip {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 12px);
   left: 50%;
   transform: translateX(-50%);
-  background: #0f172a;
+  background: #1e1f20;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
   font-size: 11px;
   color: #fff;
   width: 220px;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.15s;
-  z-index: 999;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-.gt-node-dot-wrap:hover .gt-node-tooltip {
+.gt-theme-light .gt-node-tooltip,
+body:not(.dark-theme):not(.theme-dark) .gt-node-tooltip {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #1e293b;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.gt-tree-node-wrap:hover .gt-node-tooltip {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 .gt-tooltip-header {
-  font-weight: 700;
-  color: #8ab4f8;
-  margin-bottom: 4px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.gt-tooltip-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.gt-tooltip-badge.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.gt-tooltip-badge.other {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
+.gt-tooltip-level {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
 .gt-tooltip-snippet {
+  font-size: 11px;
+  line-height: 1.4;
   color: #cbd5e1;
-  line-height: 1.35;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 8px;
+  border-radius: 6px;
+  margin-bottom: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.gt-theme-light .gt-tooltip-snippet,
+body:not(.dark-theme):not(.theme-dark) .gt-tooltip-snippet {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.gt-tooltip-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.gt-tooltip-jump-btn {
+  flex: 1;
+  background: var(--gt-active-green, #10b981);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.gt-tooltip-jump-btn:hover {
+  opacity: 0.9;
+}
+
+.gt-tooltip-branch-btn {
+  background: rgba(78, 128, 238, 0.18);
+  color: #8ab4f8;
+  border: 1px solid rgba(78, 128, 238, 0.35);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.gt-tooltip-branch-btn:hover {
+  background: rgba(78, 128, 238, 0.3);
 }
 
 /* Flash animacja przeskoku */
