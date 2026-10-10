@@ -1,11 +1,6 @@
 /**
  * Gemini Tree Chrome Extension — Content Script for gemini.google.com
- * Handles:
- * 1. Master enable/disable toggle.
- * 2. Strict per-chat isolation (no mixing between chats).
- * 3. Hiding alternative branch messages (only active branch visible).
- * 4. High-contrast theme adaptation (Light / Dark).
- * 5. No overlapping UI elements.
+ * Ultra-stable, flicker-free, with chat isolation, branch hiding, and theme adaptation.
  */
 
 (() => {
@@ -24,7 +19,8 @@
   let currentTree = createEmptyTree('init');
   let branchingFromNode = null;
   let drawerOpen = false;
-  let scanInterval = null;
+  let scanDebounceTimer = null;
+  let isScanning = false;
 
   function createEmptyTree(chatId) {
     return {
@@ -39,13 +35,11 @@
 
   // --- Detect Current Unique Chat ID ---
   function detectCurrentChatId() {
-    // 1. If URL has specific conversation ID e.g. /app/4f17a960ec8b4...
     const urlMatch = window.location.pathname.match(/\/app\/([a-zA-Z0-9_-]{8,})/);
     if (urlMatch) {
       return `chat_${urlMatch[1]}`;
     }
 
-    // 2. If at /app without ID, use or create a unique session ID
     let sessId = sessionStorage.getItem('gt_current_session_id');
     if (!sessId) {
       sessId = `new_session_${Date.now()}`;
@@ -58,30 +52,24 @@
     return `geminitree_data_${chatId}`;
   }
 
-  // --- Theme Detection (Light vs Dark) ---
+  // --- Theme Detection (No Reflow Forcing) ---
   function updateThemeClass() {
     const isDark = 
       document.documentElement.getAttribute('data-theme') === 'dark' ||
       document.body.classList.contains('dark-theme') ||
       document.body.classList.contains('theme-dark') ||
-      (() => {
-        try {
-          const bg = window.getComputedStyle(document.body).backgroundColor;
-          const rgb = bg.match(/\d+/g);
-          if (rgb && rgb.length >= 3) {
-            const lum = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
-            return lum < 128;
-          }
-        } catch (e) {}
-        return false;
-      })();
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     if (isDark) {
-      document.body.classList.add('gt-theme-dark');
-      document.body.classList.remove('gt-theme-light');
+      if (!document.body.classList.contains('gt-theme-dark')) {
+        document.body.classList.add('gt-theme-dark');
+        document.body.classList.remove('gt-theme-light');
+      }
     } else {
-      document.body.classList.add('gt-theme-light');
-      document.body.classList.remove('gt-theme-dark');
+      if (!document.body.classList.contains('gt-theme-light')) {
+        document.body.classList.add('gt-theme-light');
+        document.body.classList.remove('gt-theme-dark');
+      }
     }
   }
 
@@ -89,7 +77,6 @@
   async function loadTreeForCurrentChat() {
     const newChatId = detectCurrentChatId();
 
-    // If chat changed, reset state cleanly
     if (newChatId !== activeChatId) {
       activeChatId = newChatId;
       branchingFromNode = null;
@@ -135,11 +122,12 @@
     document.querySelectorAll('.gt-branch-action-btn').forEach(b => b.remove());
     document.querySelectorAll('.gt-version-pill-container').forEach(p => p.remove());
     document.querySelectorAll('.gt-hidden-turn').forEach(el => el.classList.remove('gt-hidden-turn'));
+    document.querySelectorAll('[data-gt-injected]').forEach(el => delete el.dataset.gtInjected);
     document.body.classList.remove('gt-drawer-open');
     drawerOpen = false;
   }
 
-  // 1. Topbar Button (with Overlap Prevention)
+  // 1. Topbar / Floating Toggle Button
   function ensureTopbarButton() {
     if (!isExtensionEnabled) return;
     if (document.getElementById('gt-topbar-btn')) return;
@@ -287,83 +275,84 @@
     });
   }
 
-  // --- Message Scanning & Branch Isolation ---
+  // --- Safe Message Detection on Gemini Page (No Layout Thrashing) ---
   function scanGeminiMessages() {
-    if (!isExtensionEnabled) return;
+    if (!isExtensionEnabled || isScanning) return;
+    isScanning = true;
 
-    updateThemeClass();
-    const userQueryElements = findUserQueryElements();
-    let prevParentId = 'root';
-    let changed = false;
+    try {
+      updateThemeClass();
+      const userQueryElements = findUserQueryElements();
+      let prevParentId = 'root';
+      let changed = false;
 
-    // Track which elements belong to which nodes
-    userQueryElements.forEach((el, index) => {
-      const text = extractTextFromElement(el);
-      if (!text) return;
+      userQueryElements.forEach((el, index) => {
+        const text = extractTextFromElement(el);
+        if (!text) return;
 
-      // Inject "Rozgałęź" button
-      injectBranchAction(el, text, index);
-
-      // Check if node exists in this chat's tree
-      let existingNode = Object.values(currentTree.nodes).find(n => n.role === 'user' && n.content === text);
-      if (!existingNode) {
-        const nodeId = 'user-' + hashStr(text) + '-' + index;
-        existingNode = {
-          id: nodeId,
-          parentId: prevParentId,
-          role: 'user',
-          content: text,
-          childrenIds: [],
-          activeChildId: null,
-          timestamp: Date.now()
-        };
-        currentTree.nodes[nodeId] = existingNode;
-        if (currentTree.nodes[prevParentId]) {
-          if (!currentTree.nodes[prevParentId].childrenIds.includes(nodeId)) {
-            currentTree.nodes[prevParentId].childrenIds.push(nodeId);
+        // Check or create node in tree
+        let existingNode = Object.values(currentTree.nodes).find(n => n.role === 'user' && n.content === text);
+        if (!existingNode) {
+          const nodeId = 'user-' + hashStr(text) + '-' + index;
+          existingNode = {
+            id: nodeId,
+            parentId: prevParentId,
+            role: 'user',
+            content: text,
+            childrenIds: [],
+            activeChildId: null,
+            timestamp: Date.now()
+          };
+          currentTree.nodes[nodeId] = existingNode;
+          if (currentTree.nodes[prevParentId]) {
+            if (!currentTree.nodes[prevParentId].childrenIds.includes(nodeId)) {
+              currentTree.nodes[prevParentId].childrenIds.push(nodeId);
+            }
+            currentTree.nodes[prevParentId].activeChildId = nodeId;
           }
-          currentTree.nodes[prevParentId].activeChildId = nodeId;
+          currentTree.currentNodeId = nodeId;
+          changed = true;
         }
-        currentTree.currentNodeId = nodeId;
-        changed = true;
+
+        el.setAttribute('data-gt-node-id', existingNode.id);
+        prevParentId = existingNode.id;
+
+        // Inject UI only once per element to prevent DOM thrashing!
+        if (!el.dataset.gtInjected) {
+          injectBranchAction(el, text);
+          el.dataset.gtInjected = 'true';
+        }
+
+        // Inject / Update Version Pill cleanly
+        injectVersionPill(el, existingNode);
+      });
+
+      if (changed) {
+        saveTree();
+        updateBadge();
+        if (drawerOpen) renderGraph();
       }
 
-      // Link DOM element to tree node ID
-      el.setAttribute('data-gt-node-id', existingNode.id);
-      const turnContainer = getTurnContainer(el);
-      if (turnContainer) {
-        turnContainer.setAttribute('data-gt-node-id', existingNode.id);
-      }
-
-      prevParentId = existingNode.id;
-
-      // Inject Version Pill if prompt has multiple alternatives
-      injectVersionPill(el, existingNode);
-    });
-
-    if (changed) {
-      saveTree();
-      updateBadge();
-      if (drawerOpen) renderGraph();
+      // Apply branch visibility strictly to query containers only!
+      applyBranchVisibility();
+    } finally {
+      isScanning = false;
     }
-
-    // Apply strict branch visibility: hide messages from inactive branches!
-    applyBranchVisibility();
   }
 
-  function getTurnContainer(userQueryEl) {
+  // SAFE: Gets only the immediate message card, NEVER the whole chat container!
+  function getSafeMessageElement(userQueryEl) {
     return (
+      userQueryEl.closest('user-query') ||
+      userQueryEl.closest('.user-query-container') ||
+      userQueryEl.closest('.message-container') ||
       userQueryEl.closest('.conversation-turn') ||
-      userQueryEl.closest('[role="article"]') ||
-      userQueryEl.closest('.chat-turn') ||
-      userQueryEl.parentElement?.parentElement ||
       userQueryEl
     );
   }
 
-  // --- Strict Branch Visibility (Hiding Other Branch Turns) ---
+  // --- Strict Branch Visibility (SAFE, NO WHOLE-PAGE HIDING) ---
   function applyBranchVisibility() {
-    // 1. Get the set of node IDs in the active thread (path from root to currentNodeId)
     const activeNodeIds = new Set();
     let curr = currentTree.nodes[currentTree.currentNodeId];
     while (curr) {
@@ -371,25 +360,36 @@
       curr = curr.parentId ? currentTree.nodes[curr.parentId] : null;
     }
 
-    // 2. For all tracked turns in Gemini, show ONLY if node is in activeNodeIds!
     const allQueryElements = findUserQueryElements();
     allQueryElements.forEach(el => {
       const nodeId = el.getAttribute('data-gt-node-id');
-      const turnEl = getTurnContainer(el);
+      const targetEl = getSafeMessageElement(el);
 
-      if (nodeId && turnEl) {
+      if (nodeId && targetEl) {
         const isBranchNode = currentTree.nodes[nodeId];
-        // If this node has siblings at this level, or is downstream of an alternative branch
         if (isBranchNode) {
-          const isActive = activeNodeIds.has(nodeId);
-          if (isActive) {
-            turnEl.classList.remove('gt-hidden-turn');
-          } else {
-            // Check if this node is an alternative branch
-            const parent = currentTree.nodes[isBranchNode.parentId];
-            if (parent && (parent.childrenIds || []).length > 1) {
-              turnEl.classList.add('gt-hidden-turn');
+          const parent = currentTree.nodes[isBranchNode.parentId];
+          const hasMultipleBranches = parent && (parent.childrenIds || []).length > 1;
+
+          if (hasMultipleBranches) {
+            const isActive = activeNodeIds.has(nodeId);
+            if (isActive) {
+              targetEl.classList.remove('gt-hidden-turn');
+              // Unhide matching model response if hidden
+              const nextEl = targetEl.nextElementSibling;
+              if (nextEl && (nextEl.tagName?.toLowerCase() === 'model-response' || nextEl.classList?.contains('model-response'))) {
+                nextEl.classList.remove('gt-hidden-turn');
+              }
+            } else {
+              targetEl.classList.add('gt-hidden-turn');
+              // Also hide matching model response
+              const nextEl = targetEl.nextElementSibling;
+              if (nextEl && (nextEl.tagName?.toLowerCase() === 'model-response' || nextEl.classList?.contains('model-response'))) {
+                nextEl.classList.add('gt-hidden-turn');
+              }
             }
+          } else {
+            targetEl.classList.remove('gt-hidden-turn');
           }
         }
       }
@@ -438,7 +438,7 @@
   }
 
   // --- Injecting "Rozgałęź" Button ---
-  function injectBranchAction(userQueryEl, text, index) {
+  function injectBranchAction(userQueryEl, text) {
     if (userQueryEl.querySelector('.gt-branch-action-btn')) return;
 
     const actionContainer = 
@@ -466,7 +466,6 @@
     branchingFromNode = node;
     renderBranchBanner();
 
-    // Focus input area in Gemini
     const input = document.querySelector('rich-textarea [contenteditable="true"]') ||
                   document.querySelector('textarea') ||
                   document.querySelector('[contenteditable="true"]');
@@ -475,7 +474,7 @@
     }
   }
 
-  // --- Injecting Version Pill (< Wersja 1 z 3 >) ---
+  // --- Injecting Version Pill (< Wersja 1 z 3 >) Cleanly ---
   function injectVersionPill(userQueryEl, node) {
     const parentNode = currentTree.nodes[node.parentId];
     if (!parentNode || !parentNode.childrenIds || parentNode.childrenIds.length <= 1) {
@@ -488,12 +487,20 @@
     if (currentIndex === -1) return;
 
     let container = userQueryEl.querySelector('.gt-version-pill-container');
+    const pillKey = `${node.id}_${currentIndex}_${siblings.length}`;
+
+    // If already rendered with the exact same version numbers, do not re-render!
+    if (container && container.dataset.pillKey === pillKey) {
+      return;
+    }
+
     if (!container) {
       container = document.createElement('div');
       container.className = 'gt-version-pill-container';
       userQueryEl.insertBefore(container, userQueryEl.firstChild);
     }
 
+    container.dataset.pillKey = pillKey;
     container.innerHTML = `
       <div class="gt-version-pill">
         <button class="gt-version-arrow-btn" id="gt-prev-${node.id}" ${currentIndex <= 0 ? 'disabled' : ''} title="Poprzednia wersja">
@@ -555,10 +562,8 @@
     const targetChildId = parentNode.childrenIds[targetIndex];
     if (!targetChildId) return;
 
-    // Set active branch on parent
     parentNode.activeChildId = targetChildId;
 
-    // Follow active children to deepest node
     let curr = targetChildId;
     while (currentTree.nodes[curr] && currentTree.nodes[curr].activeChildId) {
       curr = currentTree.nodes[curr].activeChildId;
@@ -566,8 +571,6 @@
     currentTree.currentNodeId = curr;
 
     saveTree();
-
-    // Immediately hide previous branch messages and unhide active branch messages!
     applyBranchVisibility();
 
     if (drawerOpen) renderGraph();
@@ -602,7 +605,6 @@
         handleUserSentMessage();
       }
 
-      // Check if user clicked "Nowy czat" / "New chat" in Gemini sidebar
       const newChatBtn = e.target.closest('a[href="/app"], [aria-label*="Nowy czat" i], [aria-label*="New chat" i]');
       if (newChatBtn) {
         sessionStorage.setItem('gt_current_session_id', `new_session_${Date.now()}`);
@@ -610,7 +612,7 @@
           loadTreeForCurrentChat().then(() => {
             destroyExtensionUI();
             initExtensionUI();
-            scanGeminiMessages();
+            triggerDebouncedScan();
           });
         }, 300);
       }
@@ -620,14 +622,10 @@
   function handleUserSentMessage() {
     if (!branchingFromNode) return;
 
-    const targetParentId = branchingFromNode.parentId || 'root';
-    console.log('[Gemini Tree] Spawning new branch under parent:', targetParentId);
-
-    // Hide old branch messages as soon as new message is sent
     setTimeout(() => {
       branchingFromNode = null;
       renderBranchBanner();
-      scanGeminiMessages();
+      triggerDebouncedScan();
     }, 1200);
   }
 
@@ -771,6 +769,16 @@
       .replace(/'/g, '&#039;');
   }
 
+  // --- Debounced Scanner (Completely Eliminates Flickering!) ---
+  function triggerDebouncedScan() {
+    if (scanDebounceTimer) clearTimeout(scanDebounceTimer);
+    scanDebounceTimer = setTimeout(() => {
+      scanGeminiMessages();
+      ensureTopbarButton();
+      ensureBannerContainer();
+    }, 400);
+  }
+
   // --- Master Toggle Listener ---
   async function checkMasterEnabled() {
     const { gt_extension_enabled = true } = await chrome.storage.local.get('gt_extension_enabled');
@@ -779,7 +787,7 @@
       destroyExtensionUI();
     } else {
       initExtensionUI();
-      scanGeminiMessages();
+      triggerDebouncedScan();
     }
   }
 
@@ -790,7 +798,7 @@
         destroyExtensionUI();
       } else {
         initExtensionUI();
-        scanGeminiMessages();
+        triggerDebouncedScan();
       }
     }
   });
@@ -802,29 +810,43 @@
 
     await loadTreeForCurrentChat();
     initExtensionUI();
-    scanGeminiMessages();
+    triggerDebouncedScan();
     interceptSendEvents();
 
-    // Listen for URL / Chat changes in SPA
+    // Listen for SPA URL changes
     let lastUrl = location.href;
-    new MutationObserver(() => {
+    setInterval(() => {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
         loadTreeForCurrentChat().then(() => {
-          scanGeminiMessages();
-          if (drawerOpen) renderGraph();
+          destroyExtensionUI();
+          initExtensionUI();
+          triggerDebouncedScan();
         });
       }
-    }).observe(document, { subtree: true, childList: true });
+    }, 800);
 
-    // Periodic scanner
-    if (scanInterval) clearInterval(scanInterval);
-    scanInterval = setInterval(() => {
-      if (!isExtensionEnabled) return;
-      scanGeminiMessages();
-      ensureTopbarButton();
-      ensureBannerContainer();
-    }, 1500);
+    // Watch for new incoming messages without infinite mutation loops
+    const chatContainer = document.querySelector('main') || document.body;
+    const observer = new MutationObserver((mutations) => {
+      // Ignore mutations generated by our own extension elements!
+      const isOurMutation = mutations.every(m => {
+        const target = m.target;
+        return (
+          target.id?.startsWith('gt-') ||
+          target.className?.includes?.('gt-') ||
+          target.closest?.('#gt-drawer') ||
+          target.closest?.('#gt-branch-banner-root') ||
+          target.closest?.('.gt-version-pill-container')
+        );
+      });
+
+      if (!isOurMutation) {
+        triggerDebouncedScan();
+      }
+    });
+
+    observer.observe(chatContainer, { childList: true, subtree: true });
   }
 
   if (document.readyState === 'loading') {
