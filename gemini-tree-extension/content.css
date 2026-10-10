@@ -1,0 +1,571 @@
+/* ==========================================================================
+   Gemini Tree Chrome Extension — Native Styles for gemini.google.com
+   ========================================================================== */
+
+:root {
+  --gt-primary: #4E80EE;
+  --gt-purple: #9B72CF;
+  --gt-gradient: linear-gradient(135deg, #4E80EE 0%, #9B72CF 100%);
+  --gt-gradient-subtle: linear-gradient(135deg, rgba(78, 128, 238, 0.15) 0%, rgba(155, 114, 207, 0.15) 100%);
+  --gt-bg-dark: #131314;
+  --gt-surface-dark: #1e1f20;
+  --gt-surface-elevated: #282a2c;
+  --gt-border-dark: rgba(255, 255, 255, 0.12);
+  --gt-text-primary: #e3e3e3;
+  --gt-text-secondary: #c4c7c5;
+  --gt-text-muted: #8e918f;
+  --gt-active-green: #34d399;
+  --gt-fork-amber: #f59e0b;
+  --gt-font: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* --- 1. Przycisk "Rozgałęź" w akcjach prompta --- */
+.gt-branch-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(78, 128, 238, 0.12);
+  color: #8ab4f8;
+  border: 1px solid rgba(78, 128, 238, 0.3);
+  border-radius: 18px;
+  padding: 4px 10px;
+  font-family: var(--gt-font);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  margin-left: 6px;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.gt-branch-action-btn:hover {
+  background: rgba(78, 128, 238, 0.25);
+  color: #d2e3fc;
+  border-color: rgba(78, 128, 238, 0.6);
+  transform: translateY(-1px);
+}
+
+.gt-branch-action-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+/* --- 2. Selektor Wersji Prompta (Pill Selector) --- */
+.gt-version-pill-container {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 6px;
+  font-family: var(--gt-font);
+  position: relative;
+  user-select: none;
+}
+
+.gt-version-pill {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(30, 31, 32, 0.95);
+  border: 1px solid rgba(155, 114, 207, 0.35);
+  border-radius: 16px;
+  padding: 2px 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.gt-version-arrow-btn {
+  background: transparent;
+  border: none;
+  color: var(--gt-text-secondary);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s;
+}
+
+.gt-version-arrow-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.gt-version-arrow-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.gt-version-label-btn {
+  background: transparent;
+  border: none;
+  color: #c7d2fe;
+  font-family: var(--gt-font);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+
+.gt-version-label-btn:hover {
+  background: rgba(155, 114, 207, 0.2);
+}
+
+.gt-version-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: var(--gt-surface-elevated);
+  border: 1px solid var(--gt-border-dark);
+  border-radius: 12px;
+  padding: 6px;
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 260px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gt-version-dropdown-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+}
+
+.gt-version-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.gt-version-dropdown-item.active {
+  background: var(--gt-gradient-subtle);
+  border: 1px solid rgba(78, 128, 238, 0.3);
+}
+
+.gt-item-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(78, 128, 238, 0.25);
+  color: #8ab4f8;
+  padding: 2px 6px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.gt-item-text {
+  font-size: 11px;
+  color: var(--gt-text-primary);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* --- 3. Baner aktywnego rozgałęziania (Branch Banner) --- */
+.gt-branch-banner {
+  background: linear-gradient(90deg, rgba(78, 128, 238, 0.12), rgba(155, 114, 207, 0.12));
+  border: 1px solid rgba(78, 128, 238, 0.35);
+  border-radius: 14px;
+  padding: 8px 14px;
+  margin: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--gt-font);
+  animation: gtSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes gtSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gt-branch-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--gt-text-primary);
+  min-width: 0;
+}
+
+.gt-banner-icon {
+  color: var(--gt-purple);
+  flex-shrink: 0;
+}
+
+.gt-banner-text {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gt-banner-cancel-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.gt-banner-cancel-btn:hover {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fff;
+}
+
+/* --- 4. Przycisk w Topbarze Gemini (Drzewo Gałęzi) --- */
+.gt-topbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gt-surface-elevated);
+  color: var(--gt-text-primary);
+  border: 1px solid var(--gt-border-dark);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-family: var(--gt-font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  z-index: 1000;
+  user-select: none;
+}
+
+.gt-topbar-button:hover,
+.gt-topbar-button.active {
+  background: var(--gt-gradient-subtle);
+  border-color: rgba(78, 128, 238, 0.5);
+  color: #8ab4f8;
+  box-shadow: 0 2px 10px rgba(78, 128, 238, 0.2);
+}
+
+.gt-topbar-badge {
+  background: var(--gt-gradient);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+/* Floating fallback button jeśli topbar nie jest bezpośrednio dostępny */
+.gt-floating-toggle-btn {
+  position: fixed;
+  top: 14px;
+  right: 80px;
+  z-index: 999999;
+}
+
+/* --- 5. Boczny Panel Gemini Tree (In-Page Drawer) --- */
+.gt-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+  background: var(--gt-surface-dark);
+  border-left: 1px solid var(--gt-border-dark);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  z-index: 999998;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--gt-font);
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gt-drawer.open {
+  transform: translateX(0);
+}
+
+.gt-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--gt-border-dark);
+}
+
+.gt-drawer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gt-drawer-title-wrap h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.gt-drawer-icon-accent {
+  color: var(--gt-primary);
+}
+
+.gt-drawer-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--gt-text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.gt-drawer-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.gt-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Legenda i statystyki */
+.gt-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: var(--gt-surface-elevated);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.gt-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.gt-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #8ab4f8;
+}
+
+.gt-stat-label {
+  font-size: 10px;
+  color: var(--gt-text-muted);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gt-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--gt-text-secondary);
+  padding: 4px 6px;
+}
+
+.gt-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gt-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.gt-legend-dot.active {
+  background: var(--gt-active-green);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
+}
+
+.gt-legend-dot.other {
+  background: #a78bfa;
+}
+
+.gt-legend-dot.fork {
+  background: var(--gt-fork-amber);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+
+/* --- 6. Interaktywny Graf Punktów (Dot Tree) --- */
+.gt-graph-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 16px 0;
+  width: 100%;
+}
+
+.gt-graph-level {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.gt-connector-line {
+  width: 2px;
+  height: 22px;
+  background: #3c4043;
+  margin: 0 auto;
+}
+
+.gt-connector-line.active {
+  background: var(--gt-active-green);
+  box-shadow: 0 0 4px rgba(52, 211, 153, 0.4);
+}
+
+.gt-branches-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  position: relative;
+  width: 100%;
+  padding: 4px 0;
+}
+
+/* Pozioma belka łącząca rozgałęzienia */
+.gt-fork-bar {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  background: rgba(245, 158, 11, 0.4);
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.gt-node-dot-wrap {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gt-node-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3c4043;
+  border: 2px solid #5f6368;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.gt-node-dot:hover {
+  transform: scale(1.35);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+.gt-node-dot.active {
+  background: var(--gt-active-green);
+  border-color: #a7f3d0;
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.8);
+  transform: scale(1.2);
+}
+
+.gt-node-dot.other {
+  background: #6d28d9;
+  border-color: #a78bfa;
+}
+
+.gt-node-dot.fork {
+  background: var(--gt-fork-amber);
+  border-color: #fde68a;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+/* Tooltip węzła */
+.gt-node-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #282a2c;
+  border: 1px solid var(--gt-border-dark);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #fff;
+  width: 220px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s;
+  z-index: 999;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.gt-node-dot-wrap:hover .gt-node-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.gt-tooltip-header {
+  font-weight: 700;
+  color: #8ab4f8;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.gt-tooltip-snippet {
+  color: var(--gt-text-secondary);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Wyróżnienie przeskoczonej wiadomości w czacie */
+@keyframes gtFlash {
+  0% { outline: 2px solid transparent; }
+  50% { outline: 3px solid var(--gt-primary); background: rgba(78, 128, 238, 0.15); }
+  100% { outline: 2px solid transparent; }
+}
+
+.gt-highlight-flash {
+  animation: gtFlash 1.4s ease-out;
+  border-radius: 12px;
+}
